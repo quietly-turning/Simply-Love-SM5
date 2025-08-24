@@ -27,8 +27,8 @@ local leaderboard_input = LoadActor("Leaderboard_InputHandler.lua")
 -- but its prose was approachable enough for wastes-of-space like me, so I guess I'll
 -- recommend it until I find a more helpful one.
 --                                      -quietly
-local wheel_item_mt = LoadActor("WheelItemMT.lua")
 local sortmenu = { w=210, h=160 }
+local wheel_item_mt = LoadActor("WheelItemMT.lua", sortmenu)
 local lastCategory = ""
 
 local FilterTable = function(arr, func)
@@ -221,7 +221,7 @@ local function AddPlaylists()
 			end
 		end
 	end
-	
+
 	-- Favorites are basically a playlist so include those too
 	for player in ivalues(GAMESTATE:GetHumanPlayers()) do
 		local path = getFavoritesPath(player)
@@ -238,9 +238,9 @@ local function GetChangeableStyles(style)
 	-- Allow players to switch from single to double and from double to single
 	-- but only present these options if Joint Double or Joint Premium is enabled
 	-- and we're not in "AutoSetStyle" mode (all styles presented simultaneously like PIU does)
-	
+
 	if THEME:GetMetric("Common", "AutoSetStyle") == false
-	and not (PREFSMAN:GetPreference("Premium") == "Premium_Off" 
+	and not (PREFSMAN:GetPreference("Premium") == "Premium_Off"
 	and GAMESTATE:GetCoinMode() == "CoinMode_Pay") then
 		if style == "single" then
 			table.insert(available_styles, {"ChangeStyle", "Double"})
@@ -291,38 +291,38 @@ local wheel_options = {
 	-- The second element's table contains that options will show under this category.
 	-- It follows the same structure as the top level table.
 
-	{ 
-		{"", "CategorySorts"}, 
+	{
+		{"", "CategorySorts"},
 		{
-			{{"SortBy", "Group"} },
-			{ {"SortBy", "Title"} },
+			{ {"SortBy", "Group"}  },
+			{ {"SortBy", "Title"}  },
 			{ {"SortBy", "Artist"} },
-			{ {"SortBy", "Genre"} },
-			{ {"SortBy", "BPM"} },
+			{ {"SortBy", "Genre"}  },
+			{ {"SortBy", "BPM"}    },
 			{ {"SortBy", "Length"} },
-			{ {"SortBy", "Meter"} },
+			{ {"SortBy", "Meter"}  },
 			{ {"SortBy", "Popularity"} },
 			{ {"SortBy", "Recent"} },
 			{ {"SortBy", "TopGrades"} },
 			{ {"SortBy", "PopularityP1"}, function() return PROFILEMAN:IsPersistentProfile(PLAYER_1) end },
-			{ {"SortBy", "RecentP1"}, function() return PROFILEMAN:IsPersistentProfile(PLAYER_1) end },
-			{ {"SortBy", "TopP1Grades"}, function() return PROFILEMAN:IsPersistentProfile(PLAYER_1) end },
+			{ {"SortBy", "RecentP1"},     function() return PROFILEMAN:IsPersistentProfile(PLAYER_1) end },
+			{ {"SortBy", "TopP1Grades"},  function() return PROFILEMAN:IsPersistentProfile(PLAYER_1) end },
 			{ {"SortBy", "PopularityP2"}, function() return PROFILEMAN:IsPersistentProfile(PLAYER_2) end },
-			{ {"SortBy", "RecentP2"}, function() return PROFILEMAN:IsPersistentProfile(PLAYER_2) end },
-			{ {"SortBy", "TopP2Grades"}, function() return PROFILEMAN:IsPersistentProfile(PLAYER_2) end },
+			{ {"SortBy", "RecentP2"},     function() return PROFILEMAN:IsPersistentProfile(PLAYER_2) end },
+			{ {"SortBy", "TopP2Grades"},  function() return PROFILEMAN:IsPersistentProfile(PLAYER_2) end },
 
 		}
 	},
 	{
 		{"", "CategoryAdvanced"},
 		{
-			{ {"FeelingSalty", "TestInput"}, GAMESTATE:IsEventMode() },
-			{ {"HardTime", "PracticeMode"}, function() return GAMESTATE:IsEventMode() and GAMESTATE:GetCurrentSong() ~= nil and ThemePrefs.Get("KeyboardFeatures") end },
-			{ {"TakeABreather", "LoadNewSongs"} },
-			{ {"NeedMoreRam", "ViewDownloads"}, DownloadsExist },
-			{ {"WhereforeArtThou", "SongSearch"}, not GAMESTATE:IsCourseMode() and ThemePrefs.Get("KeyboardFeatures") },
-			{ {"NextPlease", "SwitchProfile"}, ThemePrefs.Get("AllowScreenSelectProfile") },
-			{ {"SetSummaryText", "SetSummary"}, SL.Global.Stages.PlayedThisGame > 0 },
+			{ {"FeelingSalty",     "TestInput" },    GAMESTATE:IsEventMode() },
+			{ {"HardTime",         "PracticeMode"},  function() return GAMESTATE:IsEventMode() and GAMESTATE:GetCurrentSong() ~= nil and ThemePrefs.Get("KeyboardFeatures") end },
+			{ {"TakeABreather",    "LoadNewSongs"} },
+			{ {"NeedMoreRam",      "ViewDownloads"}, DownloadsExist },
+			{ {"WhereforeArtThou", "SongSearch"},    not GAMESTATE:IsCourseMode() and ThemePrefs.Get("KeyboardFeatures") },
+			{ {"NextPlease",       "SwitchProfile"}, ThemePrefs.Get("AllowScreenSelectProfile") },
+			{ {"SetSummaryText",   "SetSummary"},    SL.Global.Stages.PlayedThisGame > 0 },
 		}
 	},
 	{
@@ -345,10 +345,10 @@ local wheel_options = {
 	-- and offer to switch them back to casual mode. This allows them to do so again.
 	-- It's technically not possible to reach the sort menu in Casual Mode, but juuust in case let's still
 	-- include the check.
-	{ {"ChangeMode", "Casual"}, SL.Global.Stages.PlayedThisGame == 0 and SL.Global.GameMode ~= "Casual" },
-	{ {"ImLovinIt", "AddFavorite"}, function() return GAMESTATE:GetCurrentSong() ~= nil end},
+	{ {"ChangeMode", "Casual"},      SL.Global.Stages.PlayedThisGame == 0 and SL.Global.GameMode ~= "Casual" },
+	{ {"ImLovinIt",  "AddFavorite"}, function() return GAMESTATE:GetCurrentSong() ~= nil end},
 	AddFavorites(),
-	{ {"GrooveStats", "Leaderboard"}, function() return GAMESTATE:GetCurrentSong() ~= nil end },	
+	{ {"GrooveStats", "Leaderboard"}, function() return GAMESTATE:GetCurrentSong() ~= nil end },
 }
 
 
@@ -362,6 +362,7 @@ local t = Def.ActorFrame {
 	OnCommand=function(self) self:playcommand("AssessAvailableChoices") end,
 	ShowSortMenuCommand=function(self) self:visible(true) end,
 	HideSortMenuCommand=function(self) self:visible(false) end,
+
 	EnterCategoryMessageCommand=function(self, params)
 		local category = params.Category
 		lastCategory = params.Category
@@ -402,7 +403,7 @@ local t = Def.ActorFrame {
 		-- get the currently active SortOrder and truncate the "SortOrder_" from the beginning
 		local current_sort_order = ToEnumShortString(GAMESTATE:GetSortOrder())
 		local current_sort_order_index = 1
-		--SM(filtered_wheel_options)
+
 		-- find the sick_wheel index of the item we want to display first when the player activates this SortMenu
 		for i=1, #filtered_wheel_options do
 			if filtered_wheel_options[i][1] == "SortBy" and filtered_wheel_options[i][2] == current_sort_order then
@@ -436,7 +437,7 @@ local t = Def.ActorFrame {
 			SCREENMAN:set_input_redirected(player, true)
 		end
 		self:playcommand("HideSortMenu")
-		
+
 		overlay:playcommand("ShowTestInput")
 	end,
 	DirectInputToLeaderboardCommand=function(self)
@@ -448,7 +449,7 @@ local t = Def.ActorFrame {
 			SCREENMAN:set_input_redirected(player, true)
 		end
 		self:playcommand("HideSortMenu")
-		
+
 		overlay:playcommand("ShowLeaderboard")
 	end,
 	-- this returns input back to the engine and its ScreenSelectMusic
@@ -498,7 +499,7 @@ local t = Def.ActorFrame {
 					table.insert(filtered_wheel_options, {option[1][1], option[1][2]})
 				end
 			end
-		end	
+		end
 		-- Override sick_wheel's default focus_pos, which is math.floor(num_items / 2)
 		--
 		-- keep in mind that num_items is the number of Actors in the wheel (here, 7)

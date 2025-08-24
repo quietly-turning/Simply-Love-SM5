@@ -81,7 +81,7 @@ local input = function(event)
 				-- if the overlay starts with "Category"
 				elseif focus.new_overlay:match("^Category") then
 					-- Pass in everything after "Category" to the broadcast
-					MESSAGEMAN:Broadcast('EnterCategory', { Category = focus.new_overlay })
+					sortmenu:playcommand('EnterCategory', { Category = focus.new_overlay })
 				elseif focus.new_overlay == "TestInput" then
 					sortmenu:queuecommand("DirectInputToTestInput")
 				elseif focus.new_overlay == "Leaderboard" then
@@ -137,7 +137,7 @@ local input = function(event)
 						if SONGMAN:GetPreferredSortSongs() then
 							overlay:queuecommand("DirectInputToEngine")
 							SCREENMAN:GetTopScreen():GetMusicWheel():ChangeSort("SortOrder_Preferred")
-						else 
+						else
 							SM(ToEnumShortString(event.PlayerNumber).." has no favorites!")
 						end
 					else
