@@ -55,7 +55,8 @@ local input = function(event)
 					screen:SetNextScreenName("ScreenSelectMusicCasual")
 					screen:StartTransitioningScreen("SM_GoToNextScreen")
 				end
-				-- the player wants to change styles, for example from single to double
+
+			-- the player wants to change styles, for example from single to double
 			elseif focus.kind == "ChangeStyle" then
 				-- If the MenuTimer is in effect, we need to make sure the current number of seconds
 				-- remaining is preserved so we can reinstate it later. ShowPressStartForOptions
@@ -75,6 +76,9 @@ local input = function(event)
 				-- finally, reload the screen
 				screen:SetNextScreenName("ScreenReloadSSM")
 				screen:StartTransitioningScreen("SM_GoToNextScreen")
+
+			-- the player has selected a choice that transfers them out of
+			-- the SortMenu modal dialog to a different modal dialog
 			elseif focus.new_overlay then
 				if focus.new_overlay == "GoBack" then
 					sortmenu:playcommand("AssessAvailableChoices")
@@ -84,25 +88,30 @@ local input = function(event)
 					sortmenu:playcommand('EnterCategory', { Category = focus.new_overlay })
 				elseif focus.new_overlay == "TestInput" then
 					sortmenu:queuecommand("DirectInputToTestInput")
+					
 				elseif focus.new_overlay == "Leaderboard" then
 					-- The leaderboard entry is removed altogether if the service isn't available.
 					sortmenu:queuecommand("DirectInputToLeaderboard")
+
 				elseif focus.new_overlay == "SongSearch" then
 					-- Direct the input back to the engine, so that the ScreenTextEntry overlay
 					-- works correctly.
 					overlay:queuecommand("DirectInputToEngineForSongSearch")
+
 				elseif focus.new_overlay == "LoadNewSongs" then
 					-- Make sure we cancel the request if it's active before trying to switch screens.
 					-- This prevents the "Stale ActorFrame" error.
 					overlay:GetChild("PaneDisplayMaster"):GetChild("GetScoresRequester"):playcommand("Cancel")
 					overlay:playcommand("DirectInputToEngine")
 					SCREENMAN:SetNewScreen("ScreenReloadSongsSSM")
+
 				elseif focus.new_overlay == "ViewDownloads" then
 					-- Make sure we cancel the request if it's active before trying to switch screens.
 					-- This prevents the "Stale ActorFrame" error.
 					overlay:GetChild("PaneDisplayMaster"):GetChild("GetScoresRequester"):playcommand("Cancel")
 					overlay:playcommand("DirectInputToEngine")
 					SCREENMAN:SetNewScreen("ScreenViewDownloads")
+
 				elseif focus.new_overlay == "SwitchProfile" then
 					SL.Global.FastProfileSwitchInProgress = true
 					-- If a memory card is inserted we can't be on that profile's songs when switching profiles
@@ -114,8 +123,8 @@ local input = function(event)
 					-- to different ones.
 					GAMESTATE:SaveProfiles()
 					PROFILEMAN:SaveMachineProfile()
-
 					overlay:queuecommand("DirectInputToEngineForSelectProfile")
+
 				elseif focus.new_overlay == "AddFavorite" then
 					addOrRemoveFavorite(event.PlayerNumber)
 					-- Nudge the wheel a bit so that that the icon is correctly updated.
@@ -124,9 +133,11 @@ local input = function(event)
 					screen:GetMusicWheel():Move(1)
 					screen:GetMusicWheel():Move(-1)
 					screen:GetMusicWheel():Move(0)
+
 				elseif focus.new_overlay == "PracticeMode" then
 					SCREENMAN:GetTopScreen():SetNextScreenName("ScreenPractice")
 					SCREENMAN:GetTopScreen():StartTransitioningScreen("SM_GoToNextScreen")
+
 				elseif focus.new_overlay == "Preferred" then
 					-- Only allow sorting by favorites if there are favorites available
 					if (#SL[ToEnumShortString(event.PlayerNumber)].Favorites > 0) then

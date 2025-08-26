@@ -2,6 +2,7 @@
 -- set up the SortMenu's choices first, prior to Actor initialization
 -- sick_wheel_mt is a metatable with global scope defined in ./Scripts/Consensual-sick_wheel.lua
 local sort_wheel = setmetatable({}, sick_wheel_mt)
+
 -- the logic that handles navigating the SortMenu
 -- (scrolling through choices, choosing one, canceling)
 -- is large enough they get their own files
@@ -57,129 +58,30 @@ end
 
 ------------------------------------------------------------
 
-local function AddFavorites()
-    for player in ivalues(GAMESTATE:GetHumanPlayers()) do
-        local path = getFavoritesPath(player)
-        if FILEMAN:DoesFileExist(path) then
-            return {{"MixTape", "Preferred"}}
-        end
-    end
-    return nil
-end
-
--- Only display the View Downloads option if we're connected to
--- GrooveStats and Auto-Downloads are enabled.
-local function DownloadsExist()
-    return SL.GrooveStats.IsConnected and ThemePrefs.Get("AutoDownloadUnlocks")
-end
-
-local function AddPlayerSortOptions()
-    local player_sort_options = {}
-    for player in ivalues(GAMESTATE:GetHumanPlayers()) do
-        if PROFILEMAN:IsPersistentProfile(player) then
-            table.insert(player_sort_options, {"SortBy", "Top" .. ToEnumShortString(player) .. "Grades"})
-        end
-    end
-    return player_sort_options
-end
-
-local function AddPlaylists()
-
-	-- First add the machine playlists
-	local player_sort_options = {}
-	-- Get the name of every file in the Other/Playlists directory
-	local files = FILEMAN:GetDirListing(THEME:GetCurrentThemeDirectory().."Other/Playlists/")
-	-- Add each file to the wheel options
-	for i=1, #files do
-		local file = files[i]
-		if file:match("%.txt$") then
-			local playlist = file:gsub("%.txt$", "")
-			table.insert(player_sort_options, {{"MachinePlaylist", playlist}})
-		end
-	end
-
-	-- Then add the personal playlists
-	for player in ivalues(GAMESTATE:GetHumanPlayers()) do
-		local playlistPath = PROFILEMAN:GetProfileDir(ProfileSlot[PlayerNumber:Reverse()[player] + 1]) .."/Playlists/";
-		local playerPlaylists = FILEMAN:GetDirListing(playlistPath)
-		for i=1, #playerPlaylists do
-			local file = playerPlaylists[i]
-			if file:match("%.txt$") then
-				local playlist = file:gsub("%.txt$", "")
-				table.insert(player_sort_options, {{"PersonalPlaylist", playlist}})
-			end
-		end
-	end
-
-	-- Favorites are basically a playlist so include those too
-	for player in ivalues(GAMESTATE:GetHumanPlayers()) do
-		local path = getFavoritesPath(player)
-		if FILEMAN:DoesFileExist(path) then
-			table.insert(player_sort_options, {{"MixTape", "Preferred"}})
-			break
-		end
-	end
-	return player_sort_options
-end
-
-local function GetChangeableStyles(style)
-	local available_styles = {}
-	-- Allow players to switch from single to double and from double to single
-	-- but only present these options if Joint Double or Joint Premium is enabled
-	-- and we're not in "AutoSetStyle" mode (all styles presented simultaneously like PIU does)
-
-	if THEME:GetMetric("Common", "AutoSetStyle") == false
-	and not (PREFSMAN:GetPreference("Premium") == "Premium_Off"
-	and GAMESTATE:GetCoinMode() == "CoinMode_Pay") then
-		if style == "single" then
-			table.insert(available_styles, {"ChangeStyle", "Double"})
-			if ThemePrefs.Get("AllowDanceSolo") then
-				table.insert(available_styles, {"ChangeStyle", "Solo"})
-			end
-		elseif style == "double" then
-			table.insert(available_styles, {"ChangeStyle", "Single"})
-			if ThemePrefs.Get("AllowDanceSolo") then
-				table.insert(available_styles, {"ChangeStyle", "Solo"})
-			end
-		elseif style == "solo" then
-			table.insert(available_styles, {"ChangeStyle", "Single"})
-			table.insert(available_styles, {"ChangeStyle", "Double"})
-		-- Couple doesn't have enough content for people to be able to switch into it
-		-- However, if for some reason you end up in couples mode, you should be able to
-		-- escape
-		elseif style == "couple" then
-			table.insert(available_styles, {"ChangeStyle", "Versus"})
-		-- Routine is not ready for use yet, but it might be soon.
-		-- This can be uncommented at that time to allow switching from versus into routine.
-		-- elseif style == "versus" then
-		-- 	table.insert(available_styles, {"ChangeStyle", "Routine"})
-		end
-		return available_styles
-	end
-end
 local style = GAMESTATE:GetCurrentStyle():GetName():gsub("8", "")
+local AddFavorites, DownloadsExist, AddPlayerSortOptions, AddPlaylists, GetChangeableStyles = unpack(LoadActor("./SortMenuHelpers.lua"))
+
+-- `wheel_options` is the master table that defines the SortMenu's choices
+-- The structure is as follows:
+-- The top level table contains the options that will be displayed in the SortMenu.
+-- For instance: { {"SortBy", "Group"} } adds the SortBy (toptext) Group (bottomtext) option to the SortMenu.
+
+-- If a second element is present, this means we're either providing a condition determining whether or not the option is displayed.
+-- or we're creating a submenu.
+-- If the second element is a table, it's a submenu, if it equates to a boolean, it's a condition.
+
+-- Conditions:
+-- These determine whether or not the option will be displayed.
+-- For instance: { {"SortBy", "Group"}, GAMESTATE:IsCourseMode() } will only display the Group option in CourseMode.
+-- You can use any Lua expression that equates to a boolean value here.
+-- Alternatively, you may provide a function that returns a boolean value for more complex and timely conditions.
+
+-- Submenus:
+-- We can create categories within the SortMenu by providing a table as the second element
+-- The first element becomes the top and bottomtext for the category.
+-- The second element's table contains that options will show under this category.
+-- It follows the same structure as the top level table.
 local wheel_options = {
-	-- This is the master table that controls the SortMenu's choices
-	-- The structure is as follows:
-	-- The top level table contains the options that will be displayed in the SortMenu.
-	-- For instance: { {"SortBy", "Group"} } adds the SortBy (toptext) Group (bottomtext) option to the SortMenu.
-
-	-- If a second element is present, this means we're either providing a condition determining whether or not the option is displayed.
-	-- or we're creating a submenu.
-	-- If the second element is a table, it's a submenu, if it equates to a boolean, it's a condition.
-
-	-- Conditions:
-	-- These determine whether or not the option will be displayed.
-	-- For instance: { {"SortBy", "Group"}, GAMESTATE:IsCourseMode() } will only display the Group option in CourseMode.
-	-- You can use any Lua expression that equates to a boolean value here.
-	-- Alternatively, you may provide a function that returns a boolean value for more complex and timely conditions.
-
-	-- Submenus:
-	-- We can create categories within the SortMenu by providing a table as the second element
-	-- The first element becomes the top and bottomtext for the category.
-	-- The second element's table contains that options will show under this category.
-	-- It follows the same structure as the top level table.
-
 	{
 		{"", "CategorySorts"},
 		{
