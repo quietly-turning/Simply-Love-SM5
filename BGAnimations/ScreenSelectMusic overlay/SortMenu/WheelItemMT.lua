@@ -157,10 +157,15 @@ return {
 			end
 		end,
 
+
+		-- `self` is one particular instance of the metatable returned by WheelItemMT
+		-- `info` is an individual tuple from filtered_wheel_options like
+		--    {'SortBy','Title'} or {'TakeABreather', 'LoadNewSongs'} or {'ToggleFolder','CategoryStyles'}
 		set = function(self, info)
 			if not info then self.bottom_text:settext("") return end
 			self.info = info
 			self.kind = info[1]
+
 
 			if self.kind == "SortBy" then
 				self.sort_by = info[2]
@@ -168,6 +173,9 @@ return {
 			elseif self.kind == "ChangeMode" or self.kind == "ChangeStyle" then
 				self.change = info[2]
 
+			elseif self.kind == "ToggleFolder" then
+				self.toggle_folder = info[2]
+				
 			else
 				self.new_overlay = info[2]
 			end
@@ -177,11 +185,6 @@ return {
 
 			self.top_text:settext(toptext)
 			self.bottom_text:settext(bottomtext)
-			if bottomtext == "Go Back" then
-				self.bottom_text:diffuse(Color.Red)
-			else
-				self.bottom_text:diffuse(Color.White)
-			end
 		end
 	}
 }

@@ -87,27 +87,34 @@ local input = function(event)
 				screen:SetNextScreenName("ScreenReloadSSM")
 				screen:StartTransitioningScreen("SM_GoToNextScreen")
 
-			-- the player has selected a choice that transfers them out of
-			-- the SortMenu modal dialog to a different modal dialog
-			elseif focus.new_overlay then
-				if focus.new_overlay == "GoBack" then
-					sortmenu:playcommand("AssessAvailableChoices")
-
-			-- if the overlay starts with "Category"
-			elseif focus.new_overlay:match("^Category") then
+			elseif focus.toggle_folder then
 				local folder_name
 
+				-- find the folder in `wheel_options` array and flip its `open` flag
 				for i, folder in ipairs(wheel_options) do
-					if folder.name == focus.new_overlay then
+					if folder.name == focus.toggle_folder then
 						folder.open = not folder.open
 						folder_name = folder.name
 						break
 					end
 				end
 
+				-- after toggling a folder open/closed, AssessAvailableChoicesCommand will
+				-- build a fresh 1-dimensional array of rows to present the user:
+				--   if the user closed a folder, there will be fewer elements in the array than before
+				--   if the user opened a folder, there will be more than before.
+				-- this means the index of elements in the array will change!  unless we manually handle
+				-- the wheel's new focus after a toggle, the SortMenu will appear to "jump" somewhere
+				-- else in the list after toggling.
+				-- so, pass folder_name to AssessAvailableChoices so we can search for the new index of the
+				-- folder we just toggled and set the wheel's focus to that
 				sortmenu:playcommand("AssessAvailableChoices", {folder_name=folder_name})
 
-				elseif focus.new_overlay == "TestInput" then
+			-- the player has selected a choice that transfers them out of
+			-- the SortMenu modal dialog to a different modal dialog
+			elseif focus.new_overlay then
+
+				if focus.new_overlay == "TestInput" then
 					sortmenu:queuecommand("DirectInputToTestInput")
 
 				elseif focus.new_overlay == "Leaderboard" then
@@ -186,4 +193,5 @@ local input = function(event)
 	end
 	return false
 end
+
 return input

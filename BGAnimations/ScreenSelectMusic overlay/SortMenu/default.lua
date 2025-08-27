@@ -25,26 +25,10 @@ local wheel_item_mt = LoadActor("WheelItemMT.lua", sortmenu_dimensions)
 local style = GAMESTATE:GetCurrentStyle():GetName():gsub("8", "")
 local AddFavorites, DownloadsExist, AddPlayerSortOptions, AddPlaylists, GetChangeableStyles = unpack(LoadActor("./SortMenuHelpers.lua"))
 
--- `wheel_options` is the master table that defines the SortMenu's choices
+-- `wheel_options` is the table that defines the SortMenu's choices
 -- The structure is as follows:
--- The top level table contains the options that will be displayed in the SortMenu.
--- For instance: { {"SortBy", "Group"} } adds the SortBy (toptext) Group (bottomtext) option to the SortMenu.
+-- TODO: document new structure once it settles
 
--- If a second element is present, this means we're either providing a condition determining whether or not the option is displayed.
--- or we're creating a submenu.
--- If the second element is a table, it's a submenu, if it equates to a boolean, it's a condition.
-
--- Conditions:
--- These determine whether or not the option will be displayed.
--- For instance: { {"SortBy", "Group"}, GAMESTATE:IsCourseMode() } will only display the Group option in CourseMode.
--- You can use any Lua expression that equates to a boolean value here.
--- Alternatively, you may provide a function that returns a boolean value for more complex and timely conditions.
-
--- Submenus:
--- We can create categories within the SortMenu by providing a table as the second element
--- The first element becomes the top and bottomtext for the category.
--- The second element's table contains that options will show under this category.
--- It follows the same structure as the top level table.
 local wheel_options = {
 	{
 		name="CategoryCommon",
@@ -119,8 +103,10 @@ local sort_wheel = setmetatable({}, sick_wheel_mt)
 
 -- the logic that handles navigating the SortMenu
 -- (scrolling through choices, choosing one, canceling)
--- is large enough they get their own files
+-- is complex enough to be in its own file
 local sortmenu_input    = LoadActor("SortMenu_InputHandler.lua", {sort_wheel, wheel_options})
+
+-- input handlers for TestInput and Leaderboards are similarly complex
 local testinput_input   = LoadActor("TestInput_InputHandler.lua")
 local leaderboard_input = LoadActor("Leaderboard_InputHandler.lua")
 
@@ -224,7 +210,7 @@ local t = Def.ActorFrame {
 			-- which could result in a folder having 0 children.  e.g. AddPlaylists() could
 			-- return an empty table.  only add a row for this folder if it has children
 			if #folder.children > 0 then
-				table.insert(filtered_wheel_options, {"", folder.name})
+				table.insert(filtered_wheel_options, {"ToggleFolder", folder.name})
 			end
 
 			-- a folder's `open` attribute is toggled in SortMenu_InputHandler
@@ -242,11 +228,15 @@ local t = Def.ActorFrame {
 			end
 		end
 
-
-		for i, row in ipairs(filtered_wheel_options) do
-			if params and row[2] == params.folder_name then
-				wheel_index = i
-				break
+		-- when a folder toggle occurs, indexes in `filtered_wheel_options` will change
+		-- as there will be more/fewer items than prior to the toggle. find the new index
+		-- of the folder that was toggled and pass it as the 2nd arg to set_info_set()
+		if params and params.folder_name then
+			for i, row in ipairs(filtered_wheel_options) do
+				if row[2] == params.folder_name then
+					wheel_index = i
+					break
+				end
 			end
 		end
 
