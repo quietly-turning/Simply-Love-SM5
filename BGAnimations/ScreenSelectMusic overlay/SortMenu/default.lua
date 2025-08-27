@@ -243,9 +243,6 @@ local t = Def.ActorFrame {
 		end
 
 
-		-- the second argument passed to set_info_set is the index of the item in wheel_options
-		-- that we want to have focus when the wheel is displayed
-		local wheel_index = 1
 		for i, row in ipairs(filtered_wheel_options) do
 			if params and row[2] == params.folder_name then
 				wheel_index = i
