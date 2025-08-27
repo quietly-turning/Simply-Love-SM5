@@ -17,8 +17,8 @@
 -- but its prose was approachable enough for wastes-of-space like me, so I guess I'll
 -- recommend it until I find a more helpful one.
 --                                      -quietly
-local sortmenu = { w=210, h=160 }
-local wheel_item_mt = LoadActor("WheelItemMT.lua", sortmenu)
+local sortmenu_dimensions = { w=210, h=160 }
+local wheel_item_mt = LoadActor("WheelItemMT.lua", sortmenu_dimensions)
 
 ------------------------------------------------------------
 
@@ -215,25 +215,41 @@ local t = Def.ActorFrame {
 	end,
 
 	AssessAvailableChoicesCommand=function(self, params)
-
+		-- simple array of rows in the SortMenu's wheel
 		local filtered_wheel_options = {}
 
+		-- build the array of rows
 		for i, folder in ipairs(wheel_options) do
-			-- each row in a folder is conditionally evaluated at init, which can result
-			-- in folders with 0 children. only add folder row if it has children
+			-- some folders' `children` table are dynamically constructed at SSM screen init,
+			-- which could result in a folder having 0 children.  e.g. AddPlaylists() could
+			-- return an empty table.  only add a row for this folder if it has children
 			if #folder.children > 0 then
 				table.insert(filtered_wheel_options, {"", folder.name})
 			end
 
+			-- a folder's `open` attribute is toggled in SortMenu_InputHandler
 			if (folder.open) then
 				for _, row in ipairs(folder.children) do
-					if row[2]==nil                                     -- no condition, always add this row
-					or (type(row[2])=="function" and row[2]()==true)   -- condition is a function, evaluate it now
-					or (type(row[2])=="boolean"  and row[2]==true)     -- condition is a boolean, evaluated at screen init
+					local condition = row[2]
+
+					if condition==nil                                       -- no condition specified, always add this row
+					or (type(condition)=="function" and condition()==true)  -- condition is a function, evaluate it now
+					or (type(condition)=="boolean"  and condition==true)    -- condition is a boolean, evaluated at screen init
 					then
 						table.insert(filtered_wheel_options,  row[1])
 					end
 				end
+			end
+		end
+
+
+		-- the second argument passed to set_info_set is the index of the item in wheel_options
+		-- that we want to have focus when the wheel is displayed
+		local wheel_index = 1
+		for i, row in ipairs(filtered_wheel_options) do
+			if params and row[2] == params.folder_name then
+				wheel_index = i
+				break
 			end
 		end
 
@@ -246,25 +262,16 @@ local t = Def.ActorFrame {
 		-- in this particular usage.  Thus, set the focus to the wheel's current 4th Actor.
 		sort_wheel.focus_pos = 4
 
-		-- the second argument passed to set_info_set is the index of the item in wheel_options
-		-- that we want to have focus when the wheel is displayed
-		local wheel_index = 1
-		for i, row in ipairs(filtered_wheel_options) do
-			if params and row[2] == params.folder_name then
-				wheel_index = i
-				break
-			end
-		end
-
 		sort_wheel:set_info_set(filtered_wheel_options, wheel_index)
 	end,
+
 	-- slightly darken the entire screen
 	Def.Quad {
 		InitCommand=function(self) self:FullScreen():diffuse(Color.Black):diffusealpha(0.8) end
 	},
 	-- OptionsList Header Quad
 	Def.Quad {
-		InitCommand=function(self) self:Center():zoomto(sortmenu.w+2,22):xy(_screen.cx, _screen.cy-92) end
+		InitCommand=function(self) self:Center():zoomto(sortmenu_dimensions.w+2,22):xy(_screen.cx, _screen.cy-92) end
 	},
 	-- "Options" text
 	Def.BitmapText{
@@ -277,19 +284,19 @@ local t = Def.ActorFrame {
 	},
 	-- white border
 	Def.Quad {
-		InitCommand=function(self) self:Center():zoomto(sortmenu.w+2,sortmenu.h+2) end
+		InitCommand=function(self) self:Center():zoomto(sortmenu_dimensions.w+2, sortmenu_dimensions.h+2) end
 	},
 	-- BG of the sortmenu box
 	Def.Quad {
-		InitCommand=function(self) self:Center():zoomto(sortmenu.w,sortmenu.h):diffuse(Color.Black) end
+		InitCommand=function(self) self:Center():zoomto(sortmenu_dimensions.w, sortmenu_dimensions.h):diffuse(Color.Black) end
 	},
 	-- top mask
 	Def.Quad {
-		InitCommand=function(self) self:Center():zoomto(sortmenu.w,_screen.h/2):y(40):MaskSource() end
+		InitCommand=function(self) self:Center():zoomto(sortmenu_dimensions.w, _screen.h/2):y(40):MaskSource() end
 	},
 	-- bottom mask
 	Def.Quad {
-		InitCommand=function(self) self:zoomto(sortmenu.w,_screen.h/2):xy(_screen.cx,_screen.cy+200):MaskSource() end
+		InitCommand=function(self) self:zoomto(sortmenu_dimensions.w, _screen.h/2):xy(_screen.cx,_screen.cy+200):MaskSource() end
 	},
 	-- "Press SELECT To Cancel" text
 	Def.BitmapText{

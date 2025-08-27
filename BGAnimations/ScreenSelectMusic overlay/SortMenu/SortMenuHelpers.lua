@@ -30,9 +30,9 @@ end
 
 
 local AddPlaylists = function()
-
+	local playlists = {}
+	
 	-- First add the machine playlists
-	local player_sort_options = {}
 	-- Get the name of every file in the Other/Playlists directory
 	local files = FILEMAN:GetDirListing(THEME:GetCurrentThemeDirectory().."Other/Playlists/")
 	-- Add each file to the wheel options
@@ -40,7 +40,7 @@ local AddPlaylists = function()
 		local file = files[i]
 		if file:match("%.txt$") then
 			local playlist = file:gsub("%.txt$", "")
-			table.insert(player_sort_options, {{"MachinePlaylist", playlist}})
+			table.insert(playlists, {{"MachinePlaylist", playlist}})
 		end
 	end
 
@@ -52,7 +52,7 @@ local AddPlaylists = function()
 			local file = playerPlaylists[i]
 			if file:match("%.txt$") then
 				local playlist = file:gsub("%.txt$", "")
-				table.insert(player_sort_options, {{"PersonalPlaylist", playlist}})
+				table.insert(playlists, {{"PersonalPlaylist", playlist}})
 			end
 		end
 	end
@@ -61,11 +61,11 @@ local AddPlaylists = function()
 	for player in ivalues(GAMESTATE:GetHumanPlayers()) do
 		local path = getFavoritesPath(player)
 		if FILEMAN:DoesFileExist(path) then
-			table.insert(player_sort_options, {{"MixTape", "Preferred"}})
+			table.insert(playlists, {{"MixTape", "Preferred"}})
 			break
 		end
 	end
-	return player_sort_options
+	return playlists
 end
 
 
