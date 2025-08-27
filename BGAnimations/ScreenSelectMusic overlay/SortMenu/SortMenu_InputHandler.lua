@@ -1,41 +1,51 @@
-local sort_wheel = ...
+local sort_wheel, wheel_options = unpack(...)
+
 -- this handles user input while in the SortMenu
 local input = function(event)
 	if not (event and event.PlayerNumber and event.button) then
 		return false
 	end
 	SOUND:StopMusic()
+
 	local screen   = SCREENMAN:GetTopScreen()
+	local engineMusicWheel = screen:GetMusicWheel()
 	local overlay  = screen:GetChild("Overlay")
 	local sortmenu = overlay:GetChild("SortMenu")
+
 	if event.type ~= "InputEventType_Release" then
 		if event.GameButton == "MenuRight" or event.GameButton == "MenuDown" then
 			sort_wheel:scroll_by_amount(1)
 			sortmenu:GetChild("change_sound"):play()
+
 		elseif event.GameButton == "MenuLeft" or event.GameButton == "MenuUp" then
 			sort_wheel:scroll_by_amount(-1)
 			sortmenu:GetChild("change_sound"):play()
+
 		elseif event.GameButton == "Start" then
 			sortmenu:GetChild("start_sound"):play()
 			local focus = sort_wheel:get_actor_item_at_focus_pos()
+
 			if focus.kind == "SortBy" then
 				MESSAGEMAN:Broadcast('Sort', { order = focus.sort_by })
 				MESSAGEMAN:Broadcast('ResetHeaderText')
 				overlay:queuecommand("DirectInputToEngine")
+
 			elseif focus.kind == "PersonalPlaylist" then
 				local profileDir = PROFILEMAN:GetProfileDir(ProfileSlot[PlayerNumber:Reverse()[event.PlayerNumber] + 1])
-				SONGMAN:SetPreferredSongs(profileDir .."Playlists/" .. focus.new_overlay .. ".txt", --[[isAbsolute=]]true);
+				SONGMAN:SetPreferredSongs(profileDir .."Playlists/" .. focus.new_overlay .. ".txt", true);
 				if SONGMAN:GetPreferredSortSongs() then
 					overlay:queuecommand("DirectInputToEngine")
-					SCREENMAN:GetTopScreen():GetMusicWheel():ChangeSort("SortOrder_Preferred")
+					engineMusicWheel:ChangeSort("SortOrder_Preferred")
 				end
+
 			elseif focus.kind == "MachinePlaylist" then
 				local path = THEME:GetPathO("", "Playlists/" .. focus.new_overlay .. ".txt")
-				SONGMAN:SetPreferredSongs(path, --[[isAbsolute=]]true);
+				SONGMAN:SetPreferredSongs(path, true);
 				if SONGMAN:GetPreferredSortSongs() then
 					overlay:queuecommand("DirectInputToEngine")
-					SCREENMAN:GetTopScreen():GetMusicWheel():ChangeSort("SortOrder_Preferred")
+					screen:GetMusicWheel():ChangeSort("SortOrder_Preferred")
 				end
+
 			-- the player wants to change modes, for example from ITG to Casual
 			elseif focus.kind == "ChangeMode" then
 				SL.Global.GameMode = focus.change
@@ -82,13 +92,24 @@ local input = function(event)
 			elseif focus.new_overlay then
 				if focus.new_overlay == "GoBack" then
 					sortmenu:playcommand("AssessAvailableChoices")
-				-- if the overlay starts with "Category"
-				elseif focus.new_overlay:match("^Category") then
-					-- Pass in everything after "Category" to the broadcast
-					sortmenu:playcommand('EnterCategory', { Category = focus.new_overlay })
+
+			-- if the overlay starts with "Category"
+			elseif focus.new_overlay:match("^Category") then
+				local folder_name
+
+				for i, folder in ipairs(wheel_options) do
+					if folder.name == focus.new_overlay then
+						folder.open = not folder.open
+						folder_name = folder.name
+						break
+					end
+				end
+
+				sortmenu:playcommand("AssessAvailableChoices", {folder_name=folder_name})
+
 				elseif focus.new_overlay == "TestInput" then
 					sortmenu:queuecommand("DirectInputToTestInput")
-					
+
 				elseif focus.new_overlay == "Leaderboard" then
 					-- The leaderboard entry is removed altogether if the service isn't available.
 					sortmenu:queuecommand("DirectInputToLeaderboard")
@@ -117,7 +138,7 @@ local input = function(event)
 					-- If a memory card is inserted we can't be on that profile's songs when switching profiles
 					-- as the profile is temporarily unloaded when finishing the screen.
 					if MEMCARDMAN:GetCardState(PLAYER_1) ~= 'MemoryCardState_none' or MEMCARDMAN:GetCardState(PLAYER_2) ~= 'MemoryCardState_none' then
-						SCREENMAN:GetTopScreen():GetMusicWheel():SetOpenSection("");
+						engineMusicWheel:SetOpenSection("");
 					end
 					-- Make sure we save any currently active profiles before potentially switching
 					-- to different ones.
@@ -129,14 +150,13 @@ local input = function(event)
 					addOrRemoveFavorite(event.PlayerNumber)
 					-- Nudge the wheel a bit so that that the icon is correctly updated.
 					overlay:queuecommand("DirectInputToEngine")
-					local screen = SCREENMAN:GetTopScreen()
-					screen:GetMusicWheel():Move(1)
-					screen:GetMusicWheel():Move(-1)
-					screen:GetMusicWheel():Move(0)
+					engineMusicWheel:Move(1)
+					engineMusicWheel:Move(-1)
+					engineMusicWheel:Move(0)
 
 				elseif focus.new_overlay == "PracticeMode" then
-					SCREENMAN:GetTopScreen():SetNextScreenName("ScreenPractice")
-					SCREENMAN:GetTopScreen():StartTransitioningScreen("SM_GoToNextScreen")
+					screen:SetNextScreenName("ScreenPractice")
+					screen:StartTransitioningScreen("SM_GoToNextScreen")
 
 				elseif focus.new_overlay == "Preferred" then
 					-- Only allow sorting by favorites if there are favorites available
@@ -147,7 +167,7 @@ local input = function(event)
 						SONGMAN:SetPreferredSongs(getFavoritesPath(event.PlayerNumber), --[[isAbsolute=]]true);
 						if SONGMAN:GetPreferredSortSongs() then
 							overlay:queuecommand("DirectInputToEngine")
-							SCREENMAN:GetTopScreen():GetMusicWheel():ChangeSort("SortOrder_Preferred")
+							engineMusicWheel:ChangeSort("SortOrder_Preferred")
 						else
 							SM(ToEnumShortString(event.PlayerNumber).." has no favorites!")
 						end
@@ -155,8 +175,8 @@ local input = function(event)
 						SM("No Favorites Available")
 					end
 				elseif focus.new_overlay == "SetSummary" then
-					SCREENMAN:GetTopScreen():SetNextScreenName("ScreenEvaluationSummarySet")
-					SCREENMAN:GetTopScreen():StartTransitioningScreen("SM_GoToNextScreen")
+					screen:SetNextScreenName("ScreenEvaluationSummarySet")
+					screen:StartTransitioningScreen("SM_GoToNextScreen")
 				end
 			end
 

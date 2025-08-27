@@ -1,19 +1,3 @@
-------------------------------------------------------------
--- set up the SortMenu's choices first, prior to Actor initialization
--- sick_wheel_mt is a metatable with global scope defined in ./Scripts/Consensual-sick_wheel.lua
-local sort_wheel = setmetatable({}, sick_wheel_mt)
-
--- the logic that handles navigating the SortMenu
--- (scrolling through choices, choosing one, canceling)
--- is large enough they get their own files
-local sortmenu_input    = LoadActor("SortMenu_InputHandler.lua", sort_wheel)
-local testinput_input   = LoadActor("TestInput_InputHandler.lua")
-local leaderboard_input = LoadActor("Leaderboard_InputHandler.lua")
-
--- logic for song search is also in its own file
-local SongSearchSettings = LoadActor("SongSearchSettings.lua")
-
-------------------------------------------------------------
 -- "MT" is my personal means of denoting that this thing (the file, the variable, whatever)
 -- has something to do with a Lua metatable.
 --
@@ -35,26 +19,6 @@ local SongSearchSettings = LoadActor("SongSearchSettings.lua")
 --                                      -quietly
 local sortmenu = { w=210, h=160 }
 local wheel_item_mt = LoadActor("WheelItemMT.lua", sortmenu)
-local lastCategory = ""
-
-------------------------------------------------------------
--- General purpose function to redirect input back to the engine.
--- "self" here should refer to the SortMenu ActorFrame.
-local DirectInputToEngine = function(self)
-	local screen = SCREENMAN:GetTopScreen()
-	local overlay = self:GetParent()
-
-	screen:RemoveInputCallback(sortmenu_input)
-	screen:RemoveInputCallback(testinput_input)
-	screen:RemoveInputCallback(leaderboard_input)
-
-	for player in ivalues(PlayerNumber) do
-		SCREENMAN:set_input_redirected(player, false)
-	end
-	self:playcommand("HideSortMenu")
-	overlay:playcommand("HideTestInput")
-	overlay:playcommand("HideLeaderboard")
-end
 
 ------------------------------------------------------------
 
@@ -83,8 +47,25 @@ local AddFavorites, DownloadsExist, AddPlayerSortOptions, AddPlaylists, GetChang
 -- It follows the same structure as the top level table.
 local wheel_options = {
 	{
-		{"", "CategorySorts"},
-		{
+		name="CategoryCommon",
+		open=true,
+		children={
+			{ {"SortBy", "Group"} },
+			{ {"SortBy", "Title"} },
+			{ {"SortBy", "Recent"} },
+			-- Casual players often accidentally choose ITG mode and an experienced player in the area may notice this
+			-- and offer to switch them back to Casual mode using this option in the SortMenu.
+			{ {"ChangeMode", "Casual"}, SL.Global.Stages.PlayedThisGame == 0 },
+			{ {"ImLovinIt",  "AddFavorite"}, function() return GAMESTATE:GetCurrentSong() ~= nil end} ,
+			AddFavorites(),
+			{ {"GrooveStats", "Leaderboard"}, function() return GAMESTATE:GetCurrentSong() ~= nil end },
+		}
+	},
+
+	{
+		name="CategorySorts",
+		open=false,
+		children={
 			{ {"SortBy", "Group"}  },
 			{ {"SortBy", "Title"}  },
 			{ {"SortBy", "Artist"} },
@@ -101,12 +82,13 @@ local wheel_options = {
 			{ {"SortBy", "PopularityP2"}, function() return PROFILEMAN:IsPersistentProfile(PLAYER_2) end },
 			{ {"SortBy", "RecentP2"},     function() return PROFILEMAN:IsPersistentProfile(PLAYER_2) end },
 			{ {"SortBy", "TopP2Grades"},  function() return PROFILEMAN:IsPersistentProfile(PLAYER_2) end },
-
 		}
 	},
+
 	{
-		{"", "CategoryAdvanced"},
-		{
+		name="CategoryAdvanced",
+		open=false,
+		children={
 			{ {"FeelingSalty",     "TestInput" },    GAMESTATE:IsEventMode() },
 			{ {"HardTime",         "PracticeMode"},  function() return GAMESTATE:IsEventMode() and GAMESTATE:GetCurrentSong() ~= nil and ThemePrefs.Get("KeyboardFeatures") end },
 			{ {"TakeABreather",    "LoadNewSongs"} },
@@ -116,32 +98,55 @@ local wheel_options = {
 			{ {"SetSummaryText",   "SetSummary"},    SL.Global.Stages.PlayedThisGame > 0 },
 		}
 	},
+
 	{
-		{"", "CategoryStyles"},
-		{
-			GetChangeableStyles(style),
-		}
+		name="CategoryStyles",
+		open=false,
+		children=GetChangeableStyles(style),
 	},
+
 	{
-		{"", "CategoryPlaylists"},
-		AddPlaylists(),
+		name="CategoryPlaylists",
+		open=false,
+		children=AddPlaylists(),
 	},
-	{ {"SortBy", "Group"} },
-	{ {"SortBy", "Title"} },
-	{ {"SortBy", "Recent"} },
-	-- Allow players to switch out to a different SL GameMode if no stages have been played yet,
-	-- but don't add the current SL GameMode as a choice.
-	{ {"ChangeMode", "ITG"}, SL.Global.Stages.PlayedThisGame == 0 and SL.Global.GameMode ~= "ITG" },
-	-- Casual players often choose the wrong mode and an experienced player in the area may notice this
-	-- and offer to switch them back to casual mode. This allows them to do so again.
-	-- It's technically not possible to reach the sort menu in Casual Mode, but juuust in case let's still
-	-- include the check.
-	{ {"ChangeMode", "Casual"},      SL.Global.Stages.PlayedThisGame == 0 and SL.Global.GameMode ~= "Casual" },
-	{ {"ImLovinIt",  "AddFavorite"}, function() return GAMESTATE:GetCurrentSong() ~= nil end},
-	AddFavorites(),
-	{ {"GrooveStats", "Leaderboard"}, function() return GAMESTATE:GetCurrentSong() ~= nil end },
 }
 
+------------------------------------------------------------
+-- set up the SortMenu's choices prior to Actor initialization
+-- sick_wheel_mt is a metatable with global scope defined in ./Scripts/Consensual-sick_wheel.lua
+local sort_wheel = setmetatable({}, sick_wheel_mt)
+
+-- the logic that handles navigating the SortMenu
+-- (scrolling through choices, choosing one, canceling)
+-- is large enough they get their own files
+local sortmenu_input    = LoadActor("SortMenu_InputHandler.lua", {sort_wheel, wheel_options})
+local testinput_input   = LoadActor("TestInput_InputHandler.lua")
+local leaderboard_input = LoadActor("Leaderboard_InputHandler.lua")
+
+-- logic for song search is also in its own file
+local SongSearchSettings = LoadActor("SongSearchSettings.lua")
+
+------------------------------------------------------------
+-- General purpose function to redirect input back to the engine.
+-- "self" here should refer to the SortMenu ActorFrame.
+local DirectInputToEngine = function(self)
+	local screen = SCREENMAN:GetTopScreen()
+	local overlay = self:GetParent()
+
+	screen:RemoveInputCallback(sortmenu_input)
+	screen:RemoveInputCallback(testinput_input)
+	screen:RemoveInputCallback(leaderboard_input)
+
+	for player in ivalues(PlayerNumber) do
+		SCREENMAN:set_input_redirected(player, false)
+	end
+	self:playcommand("HideSortMenu")
+	overlay:playcommand("HideTestInput")
+	overlay:playcommand("HideLeaderboard")
+end
+
+------------------------------------------------------------
 
 local t = Def.ActorFrame {
 	Name="SortMenu",
@@ -154,58 +159,6 @@ local t = Def.ActorFrame {
 	ShowSortMenuCommand=function(self) self:visible(true) end,
 	HideSortMenuCommand=function(self) self:visible(false) end,
 
-	EnterCategoryMessageCommand=function(self, params)
-		local category = params.Category
-		lastCategory = params.Category
-		local style = GAMESTATE:GetCurrentStyle():GetName():gsub("8", "")
-		local filtered_wheel_options = {}
-		for i=1, #wheel_options do
-			local option = wheel_options[i]
-			if option ~= nil then
-				-- Only worry about options with a second element that is a table
-				if type(option[2]) == "table" then
-					-- If the first element of the option is the same as the category we're entering
-					if option[1][2] == category then
-						-- Copy the second element of the option to the wheel_options table
-						local sub_options = {}
-						for j=1, #option[2] do
-							local sub_option = option[2][j]
-							if type(sub_option[2]) == "function" then
-								if sub_option[2]() then
-									table.insert(filtered_wheel_options, sub_option[1])
-								end
-							elseif sub_option[2] == nil or sub_option[2] == true then
-								table.insert(filtered_wheel_options, sub_option[1])
-							end
-						end
-					end
-				end
-			end
-		end
-		table.insert(filtered_wheel_options, {"Options", "GoBack"})
-		-- Override sick_wheel's default focus_pos, which is math.floor(num_items / 2)
-		--
-		-- keep in mind that num_items is the number of Actors in the wheel (here, 7)
-		-- NOT the total number of things you can eventually scroll through (#wheel_options = 14)
-		--
-		-- so, math.floor(7/2) gives focus to the third item in the wheel, which looks weird
-		-- in this particular usage.  Thus, set the focus to the wheel's current 4th Actor.
-		sort_wheel.focus_pos = 4
-		-- get the currently active SortOrder and truncate the "SortOrder_" from the beginning
-		local current_sort_order = ToEnumShortString(GAMESTATE:GetSortOrder())
-		local current_sort_order_index = 1
-
-		-- find the sick_wheel index of the item we want to display first when the player activates this SortMenu
-		for i=1, #filtered_wheel_options do
-			if filtered_wheel_options[i][1] == "SortBy" and filtered_wheel_options[i][2] == current_sort_order then
-				current_sort_order_index = i
-				break
-			end
-		end
-		-- the second argument passed to set_info_set is the index of the item in wheel_options
-		-- that we want to have focus when the wheel is displayed
-		sort_wheel:set_info_set(filtered_wheel_options, current_sort_order_index)
-	end,
 	DirectInputToSortMenuCommand=function(self)
 		local screen = SCREENMAN:GetTopScreen()
 		local overlay = self:GetParent()
@@ -261,36 +214,29 @@ local t = Def.ActorFrame {
 		SCREENMAN:AddNewScreenToTop("ScreenSelectProfile")
 	end,
 
-	AssessAvailableChoicesCommand=function(self)
+	AssessAvailableChoicesCommand=function(self, params)
 
 		local filtered_wheel_options = {}
-		for i=1, #wheel_options do
-			local option = wheel_options[i]
-			if option ~= nil then
-				if type(option[2]) == "table" then
-					local sub_options = {}
-					for j=1, #option[2] do
-						local sub_option = option[2][j]
-					if type(sub_option[2]) == "function" then
-						if sub_option[2]() then
-							table.insert(sub_options, sub_option)
-						end
-					elseif sub_option[2] == nil or sub_option[2] == true then
-							table.insert(sub_options, sub_option)
-						end
+
+		for i, folder in ipairs(wheel_options) do
+			-- each row in a folder is conditionally evaluated at init, which can result
+			-- in folders with 0 children. only add folder row if it has children
+			if #folder.children > 0 then
+				table.insert(filtered_wheel_options, {"", folder.name})
+			end
+
+			if (folder.open) then
+				for _, row in ipairs(folder.children) do
+					if row[2]==nil                                     -- no condition, always add this row
+					or (type(row[2])=="function" and row[2]()==true)   -- condition is a function, evaluate it now
+					or (type(row[2])=="boolean"  and row[2]==true)     -- condition is a boolean, evaluated at screen init
+					then
+						table.insert(filtered_wheel_options,  row[1])
 					end
-					if #sub_options > 0 then
-						table.insert(filtered_wheel_options, {option[1][1], option[1][2]})
-					end
-				elseif type(option[2]) == "function" then
-					if option[2]() then
-						table.insert(filtered_wheel_options, {option[1][1], option[1][2]})
-					end
-				elseif option[2] == nil or option[2] == true then
-					table.insert(filtered_wheel_options, {option[1][1], option[1][2]})
 				end
 			end
 		end
+
 		-- Override sick_wheel's default focus_pos, which is math.floor(num_items / 2)
 		--
 		-- keep in mind that num_items is the number of Actors in the wheel (here, 7)
@@ -299,29 +245,18 @@ local t = Def.ActorFrame {
 		-- so, math.floor(7/2) gives focus to the third item in the wheel, which looks weird
 		-- in this particular usage.  Thus, set the focus to the wheel's current 4th Actor.
 		sort_wheel.focus_pos = 4
-		-- get the currently active SortOrder and truncate the "SortOrder_" from the beginning
-		local current_sort_order = ToEnumShortString(GAMESTATE:GetSortOrder())
-		local current_sort_order_index = 1
-		-- find the sick_wheel index of the item we want to display first when the player activates this SortMenu
-		if lastCategory == "" then
-			for i=1, #filtered_wheel_options do
-				if filtered_wheel_options[i][2] == current_sort_order then
-					current_sort_order_index = i
-					break
-				end
-			end
-		else
-			for i=1, #filtered_wheel_options do
-				if filtered_wheel_options[i][2] == lastCategory then
-					current_sort_order_index = i
-					break
-				end
-			end
-		end
-		lastCategory = ""
+
 		-- the second argument passed to set_info_set is the index of the item in wheel_options
 		-- that we want to have focus when the wheel is displayed
-		sort_wheel:set_info_set(filtered_wheel_options, current_sort_order_index)
+		local wheel_index = 1
+		for i, row in ipairs(filtered_wheel_options) do
+			if params and row[2] == params.folder_name then
+				wheel_index = i
+				break
+			end
+		end
+
+		sort_wheel:set_info_set(filtered_wheel_options, wheel_index)
 	end,
 	-- slightly darken the entire screen
 	Def.Quad {
