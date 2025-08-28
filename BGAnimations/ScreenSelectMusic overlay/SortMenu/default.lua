@@ -20,6 +20,9 @@
 local sortmenu_dimensions = { w=210, h=160 }
 local wheel_item_mt = LoadActor("WheelItemMT.lua", sortmenu_dimensions)
 
+-- initialize the SortMenu to be be focused on the 2nd element, SortBy-Group in the "Common" folder
+local wheel_index = 2
+
 ------------------------------------------------------------
 
 local style = GAMESTATE:GetCurrentStyle():GetName():gsub("8", "")
