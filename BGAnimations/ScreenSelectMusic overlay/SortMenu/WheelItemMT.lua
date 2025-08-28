@@ -32,10 +32,10 @@ return {
 					subself:diffusealpha(0)
 				end,
 				GainFocusCommand=function(subself)
-					subself:finishtweening():accelerate(0.175):diffuse(0.35,0.35,0.35,1)
+					subself:finishtweening():accelerate(0.1):diffuse(0.35,0.35,0.35,1)
 				end,
 				LoseFocusCommand=function(subself)
-					subself:finishtweening():decelerate(0.175):diffuse(0.2,0.2,0.2,1)
+					subself:finishtweening():decelerate(0.1):diffuse(0.2,0.2,0.2,1)
 				end
 			}
 
@@ -85,6 +85,7 @@ return {
 				Name="text container AF",
 				InitCommand=function(subself)
 					self.text_container = subself
+					subself:x(-100)
 				end,
 				GainFocusCommand=function(subself)
 					subself:diffuse( GetCurrentColor() )
@@ -99,7 +100,8 @@ return {
 					Font="Common Normal",
 					InitCommand=function(subself)
 						self.top_text = subself
-						subself:zoom(1.15):y(-15):diffusealpha(0)
+						subself:zoom(1.15):xy(32,-15):diffusealpha(0)
+						subself:horizalign(left)
 					end,
 					OnCommand=function(subself)
 						subself:sleep(0.13):linear(0.05):diffusealpha(1)
@@ -113,15 +115,17 @@ return {
 					InitCommand=function(subself)
 						self.bottom_text = subself
 						subself:zoom(0.85):y(10):diffusealpha(0):maxwidth(405)
+						subself:horizalign(left)
 					end,
 					OnCommand=function(subself)
 						subself:sleep(0.1):linear(0.15):diffusealpha(1)
 					end,
 					ShowFolderCommand=function(subself)
-						subself:horizalign(left):x(-sortmenu_dimensions.w + 70)
+						-- subself:zoom(0.85):y(10)
+						subself:x(64)
 					end,
 					HideFolderCommand=function(subself)
-						subself:horizalign(center):x(0)
+						subself:x(32)
 					end,
 				}
 			}
@@ -140,9 +144,6 @@ return {
 			end
 
 			if has_focus then
-				if (self.top_text:GetText() ~= "") then
-					self.text_container:zoom(0.6)
-				end
 				self.container:playcommand('GainFocus')
 			else
 				self.container:playcommand('LoseFocus')
@@ -151,7 +152,7 @@ return {
 			self.container:y(row_height * (item_index - math.ceil(num_items/2)))
 
 			if item_index <= 1 or  item_index >= num_items then
-				self.container:diffusealpha(0)
+				-- self.container:diffusealpha(0)
 			else
 				self.container:diffusealpha(1)
 			end
@@ -175,7 +176,7 @@ return {
 
 			elseif self.kind == "ToggleFolder" then
 				self.toggle_folder = info[2]
-				
+
 			else
 				self.new_overlay = info[2]
 			end
