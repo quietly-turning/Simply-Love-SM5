@@ -146,8 +146,13 @@ function sick_wheel:scroll_by_amount(a)
 	internal_scroll(self, self.info_pos + a)
 end
 
-function sick_wheel:get_info_at_focus_pos()
+function sick_wheel:get_index_at_focus_pos()
 	local index= self:maybe_wrap_index(self.info_pos, self.focus_pos,self.info_set)
+	return index
+end
+
+function sick_wheel:get_info_at_focus_pos()
+	local index= self:get_index_at_focus_pos()
 	return self.info_set[index]
 end
 

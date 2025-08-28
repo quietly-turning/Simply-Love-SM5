@@ -232,12 +232,7 @@ local t = Def.ActorFrame {
 		-- as there will be more/fewer items than prior to the toggle. find the new index
 		-- of the folder that was toggled and pass it as the 2nd arg to set_info_set()
 		if params and params.folder_name then
-			for i, row in ipairs(filtered_wheel_options) do
-				if row[2] == params.folder_name then
-					wheel_index = i
-					break
-				end
-			end
+			wheel_index = sort_wheel:get_index_at_focus_pos()
 		end
 
 		-- Override sick_wheel's default focus_pos, which is math.floor(num_items / 2)
