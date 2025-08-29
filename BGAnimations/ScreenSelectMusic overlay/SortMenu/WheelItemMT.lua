@@ -1,4 +1,4 @@
-local sortmenu_dimensions = ...
+local sortmenu_dimensions, wheel_options = unpack(...)
 local row_height = 36
 
 -- the metatable for an item in the sort_wheel
@@ -39,60 +39,35 @@ return {
 				end
 			}
 
-			-- folder icon
 			af[#af+1] = Def.ActorFrame{
-				Name="folder icon AF",
+				Name="text container AF",
 				InitCommand=function(subself)
-					subself:visible(false):zoom(0.075):xy(-86, 7)
-					self.folder_icon = subself
-				end,
-				ShowFolderCommand=function(subself)
-					subself:visible(true)
-				end,
-				HideFolderCommand=function(subself)
-					subself:visible(false)
+					self.text_container = subself
+					subself:x(-100):zoom(0.5)
 				end,
 
-				-- back of folder
-				LoadActor(THEME:GetPathB("ScreenSelectMusicCasual", "overlay/img/folderBack.png"))..{
-					Name="folder back",
-					OnCommand=function(subself)
-						subself:y(-10)
+				-- folder icon
+				LoadActor("./folder-solid.png")..{
+					Name="folder icon",
+					InitCommand=function(subself)
+						self.folder_icon = subself
+						subself:visible(false):vertalign(top)
+						subself:zoom(0.4):xy(28, -16)
+					end,
+					ShowFolderCommand=function(subself)
+						subself:visible(true)
+					end,
+					HideFolderCommand=function(subself)
+						subself:visible(false)
 					end,
 					GainFocusCommand=function(subself)
-						subself:diffuse(color("#c47215"))
+
+						subself:diffuse(1,1,1,1);
 					end,
 					LoseFocusCommand=function(subself)
 						subself:diffuse(color("#4e4f54"))
 					end
 				},
-
-				-- front of folder
-				LoadActor(THEME:GetPathB("ScreenSelectMusicCasual", "overlay/img/folderFront.png"))..{
-					Name="folder front",
-					InitCommand=function(subself) subself:vertalign(bottom) end,
-					OnCommand=function(subself) subself:y(64) end,
-					GainFocusCommand=function(subself)
-						subself:diffusetopedge(color("#eebc54")):diffusebottomedge(color("#7c5505")):decelerate(0.33):rotationx(50)
-					end,
-					LoseFocusCommand=function(subself)
-						subself:diffusebottomedge(color("#3d3e43")):diffusetopedge(color("#8d8e93")):decelerate(0.15):rotationx(0)
-					end,
-				}
-			}
-
-			af[#af+1] = Def.ActorFrame{
-				Name="text container AF",
-				InitCommand=function(subself)
-					self.text_container = subself
-					subself:x(-100)
-				end,
-				GainFocusCommand=function(subself)
-					subself:diffuse( GetCurrentColor() )
-				end,
-				LoseFocusCommand=function(subself)
-					subself:glow(color("1,1,1,0")):zoom(0.5):diffuse(color("#888888")):glow(color("1,1,1,0"))
-				end,
 
 				-- top text
 				Def.BitmapText{
@@ -105,7 +80,13 @@ return {
 					end,
 					OnCommand=function(subself)
 						subself:sleep(0.13):linear(0.05):diffusealpha(1)
-					end
+					end,
+					GainFocusCommand=function(subself)
+						subself:diffuse(1,1,1,1)
+					end,
+					LoseFocusCommand=function(subself)
+						subself:diffuse(0.6,0.6,0.6,1)
+					end,
 				},
 
 				-- bottom text
@@ -114,18 +95,23 @@ return {
 					Font="Common Bold",
 					InitCommand=function(subself)
 						self.bottom_text = subself
-						subself:zoom(0.85):y(10):diffusealpha(0):maxwidth(405)
+						subself:zoom(0.8):y(10):diffusealpha(0):maxwidth(405)
 						subself:horizalign(left)
 					end,
 					OnCommand=function(subself)
 						subself:sleep(0.1):linear(0.15):diffusealpha(1)
 					end,
 					ShowFolderCommand=function(subself)
-						-- subself:zoom(0.85):y(10)
 						subself:x(64)
 					end,
 					HideFolderCommand=function(subself)
 						subself:x(32)
+					end,
+					GainFocusCommand=function(subself)
+						subself:diffuse(1,1,1,1)
+					end,
+					LoseFocusCommand=function(subself)
+						subself:diffuse(0.6,0.6,0.6,1)
 					end,
 				}
 			}
@@ -145,6 +131,13 @@ return {
 
 			if has_focus then
 				self.container:playcommand('GainFocus')
+
+				-- if a folder row has focus
+				if self.top_text:GetText() == "" then
+					SCREENMAN:GetTopScreen():GetChild("Overlay"):playcommand("HideCursor")
+				else
+					SCREENMAN:GetTopScreen():GetChild("Overlay"):playcommand("ShowCursor")
+				end
 			else
 				self.container:playcommand('LoseFocus')
 			end
@@ -152,7 +145,7 @@ return {
 			self.container:y(row_height * (item_index - math.ceil(num_items/2)))
 
 			if item_index <= 1 or  item_index >= num_items then
-				-- self.container:diffusealpha(0)
+				self.container:diffusealpha(0)
 			else
 				self.container:diffusealpha(1)
 			end
@@ -166,7 +159,6 @@ return {
 			if not info then self.bottom_text:settext("") return end
 			self.info = info
 			self.kind = info[1]
-
 
 			if self.kind == "SortBy" then
 				self.sort_by = info[2]
