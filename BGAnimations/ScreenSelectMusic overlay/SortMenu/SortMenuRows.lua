@@ -12,12 +12,8 @@ local  ShowSongSearch, ShowTestInput, ShowLeaderboard, ShowDownloads, ShowPracti
 --    • statement that evaluates to a boolean,
 --    • function that returns a boolean
 --
--- top_text and bottom_text are required
--- action_if_chosen is optional
---    • it's preferred to define the action in this file
---    • however, some actions need the PlayerNumber from the input_event
---      and must be handled in SortMenu_InputHandler
--- condition_to_be_visible is optional, and handled as true if absent
+-- top_text, bottom_text, and action_if_chosen are required
+-- condition_to_be_visible is optional, and assumed true (row is visible in SortMenu) if absent
 
 local wheel_options = {
 	{
