@@ -157,23 +157,30 @@ return {
 		set = function(self, info)
 			if not info then self.bottom_text:settext("") return end
 			self.info = info
-			self.kind = info[1]
 
-			if self.kind == "SortBy" then
-				self.sort_by = info[2]
+			-- for convenience, store some data relevant to this row's action in
+			-- the ActorFrame for this row
+			if info[1] == "SortBy" then
+				self.sort_by = info[2]         -- SortMenuHelpers.lua ChangeSort() uses this
 
-			elseif self.kind == "ChangeMode" or self.kind == "ChangeStyle" then
-				self.change = info[2]
+			elseif info[1] == "ChangeMode" or info[1] == "ChangeStyle" then
+				self.change = info[2]          -- SortMenuHelpers.lua ChangeMode() uses this
 
-			elseif self.kind == "ToggleFolder" then
-				self.toggle_folder = info[2]
-
-			else
-				self.new_overlay = info[2]
+			elseif info[1] == "ToggleFolder" then
+				self.toggle_folder = info[2]   -- SortMenu's default.lua ToggleFolder() uses this
 			end
 
-			local toptext    = self.kind ~= "" and THEME:GetString("ScreenSelectMusic", self.kind) or ""
-			local bottomtext =  string.match(self.kind, "Playlist") and info[2] or THEME:GetString(self.kind == "ChangeMode" and "ScreenSelectPlayMode" or "ScreenSelectMusic", info[2])
+			-- localize the top and bottom text for this row
+			local toptext = THEME:GetString("ScreenSelectMusic", info[1])
+			local bottomtext
+
+			-- this row's bottom_text is the name of the playlist file retrieved from disk
+			if (info[1] == "Playlist") then bottomtext = info[2]
+			-- localize this row's bottom_text from ScreenSelectPlayMode (e.g. "Casual")
+			elseif (info[1] == "ChangeMode") then bottomtext = THEME:GetString("ScreenSelectPlayMode", info[2])
+			-- localize this row's bottom_text from ScreenSelectMusic
+			else bottomtext = THEME:GetString("ScreenSelectMusic", info[2])
+			end
 
 			self.top_text:settext(toptext)
 			self.bottom_text:settext(bottomtext)
