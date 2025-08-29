@@ -1,5 +1,10 @@
 local sort_wheel = ...
 
+------------------------------------------------------------
+-- first, helper functions that take the player out of the SortMenu and either
+-- show them a different overlay (like TestInput) or take them to a different
+-- screen altogether (like ShowDownloads)
+
 local function ShowSongSearch()
 	SCREENMAN:GetTopScreen():GetChild("Overlay"):queuecommand("DirectInputToEngineForSongSearch")
 end
@@ -57,6 +62,12 @@ local function ShowLoadNewSongs()
 	SCREENMAN:SetNewScreen("ScreenReloadSongsSSM")
 end
 
+
+------------------------------------------------------------
+-- next, a collection of helper functions that *change* something
+-- about ITGmania gamestate (like ChangeStyle) or ScreenSelectMusic
+-- (like ChangeMode) or its MusicWheel (like ChangeSort)
+
 -- the player wants to change the MusicWheel's song sort, for example from "Group" to "BPM"
 local function ChangeSort()
 	local focus = sort_wheel:get_actor_item_at_focus_pos()
@@ -64,6 +75,29 @@ local function ChangeSort()
 	MESSAGEMAN:Broadcast('ResetHeaderText')
 	SCREENMAN:GetTopScreen():GetChild("Overlay"):queuecommand("DirectInputToEngine")
 end
+
+-- a specific player wants to change the MusicWheel's sort to "SortOrder_Preferred"
+-- which is english-localized in Simply-Love as their "favorites"
+local function ChangeToPlayerFavoritesSort(pn)
+	-- Only allow sorting by favorites if there are favorites available
+	if (#SL[ToEnumShortString(pn)].Favorites <= 0) then
+		SM( THEME:GetString("ScreenSelectMusic", "NoPlayerFavoritesAvailable"):format(ToEnumShortString(pn)) )
+		return
+	end
+
+	-- set the MusicWheel's "preferred sort" to this player's favorites.txt
+	SONGMAN:SetPreferredSongs(getFavoritesPath(pn), --[[isAbsolute=]]true)
+
+	if SONGMAN:GetPreferredSortSongs() then
+		local screen  = SCREENMAN:GetTopScreen()
+		local overlay = screen:GetChild("Overlay")
+		overlay:queuecommand("DirectInputToEngine")
+		screen:GetMusicWheel():ChangeSort("SortOrder_Preferred")
+	else
+		SM( THEME:GetString("ScreenSelectMusic", "NoPlayerFavoritesAvailable"):format(ToEnumShortString(pn)) )
+	end
+end
+
 
 -- the player wants to change modes, for example from ITG to Casual
 local function ChangeMode()
@@ -115,7 +149,7 @@ local function ChangeStyle()
 end
 
 -- a specific player wants to add the current song from the MusicWheel as a favorite to their profile
-local function AddFavorite(pn)
+local function AddSongToFavorites(pn)
 	addOrRemoveFavorite(pn)  -- global function from ./Scripts/SL-FavoritesHandler.lua
 
 	local screen = SCREENMAN:GetTopScreen()
@@ -129,14 +163,36 @@ local function AddFavorite(pn)
 	musicwheel:Move(0)
 end
 
-local function AddFavoritesRows()
-    for player in ivalues(GAMESTATE:GetHumanPlayers()) do
-        local path = getFavoritesPath(player)
-        if FILEMAN:DoesFileExist(path) then
-            return {{"MixTape", "Preferred"}}
-        end
-    end
-    return nil
+local function SortByPlayerPlaylist(pn, info)
+	-- info[2] is the row's bottom_text, in this case the playlist name
+	local playlist_name = info[2]
+	local profileDir = PROFILEMAN:GetProfileDir(ProfileSlot[PlayerNumber:Reverse()[pn] + 1])
+
+	-- set the MusicWheel's "preferred sort" to the chosen player-profile playlist
+	SONGMAN:SetPreferredSongs(profileDir .."Playlists/" .. playlist_name .. ".txt", true);
+
+	if SONGMAN:GetPreferredSortSongs() then
+		local screen  = SCREENMAN:GetTopScreen()
+		local overlay = screen:GetChild("Overlay")
+		overlay:queuecommand("DirectInputToEngine")
+		screen:GetMusicWheel():ChangeSort("SortOrder_Preferred")
+	end
+end
+
+local function SortByMachinePlaylist(pn, info)
+	-- info[2] is the row's bottom_text, in this case the playlist name
+	local playlist_name = info[2]
+	local path = THEME:GetPathO("", "Playlists/" .. playlist_name .. ".txt")
+
+	-- set the MusicWheel's "preferred sort" to the chosen machine-profile playlist
+	SONGMAN:SetPreferredSongs(path, true);
+
+	if SONGMAN:GetPreferredSortSongs() then
+		local screen  = SCREENMAN:GetTopScreen()
+		local overlay = screen:GetChild("Overlay")
+		overlay:queuecommand("DirectInputToEngine")
+		screen:GetMusicWheel():ChangeSort("SortOrder_Preferred")
+	end
 end
 
 -- Only display the View Downloads option if we're connected to
@@ -146,7 +202,25 @@ local function DownloadsExist()
 end
 
 
+------------------------------------------------------------
+-- then, a collection of helper functions that return one or more
+-- rows to display to the player in the SortMenu.
+-- sometimes it's easier to define a hardcoded list of rows in SortMenuRows.lua
+-- sometimes it's easier to write a function that conditionally returns a collection of rows.
+-- a SortMenu "row" is structured like
+--   {{ top_text, bottom_text, action_if_chosen }, optional_condition_to_be_visible }
 
+-- returns one row for one player's favorites.txt
+local function AddFavoritesRow(pn)
+		local path = getFavoritesPath(pn)
+		if FILEMAN:DoesFileExist(path) then
+				return {"MixTape", "Preferred", function() ChangeToPlayerFavoritesSort(pn) end}
+		end
+
+    return nil
+end
+
+-- returns an array of rows for machine playlists, player playlists, and player favorites
 local AddPlaylistsRows = function()
 	local playlists = {}
 
@@ -158,7 +232,7 @@ local AddPlaylistsRows = function()
 		local file = files[i]
 		if file:match("%.txt$") then
 			local playlist = file:gsub("%.txt$", "")
-			table.insert(playlists, {{"MachinePlaylist", playlist}})
+			table.insert(playlists, {{"MachinePlaylist", playlist, function(pn, info) SortByMachinePlaylist(pn, info) end}})
 		end
 	end
 
@@ -170,51 +244,53 @@ local AddPlaylistsRows = function()
 			local file = playerPlaylists[i]
 			if file:match("%.txt$") then
 				local playlist = file:gsub("%.txt$", "")
-				table.insert(playlists, {{"PersonalPlaylist", playlist}})
+				table.insert(playlists, {{"PersonalPlaylist", playlist, function(pn, info) SortByPlayerPlaylist(pn, info) end}})
 			end
 		end
 	end
 
 	-- Favorites are basically a playlist so include those too
 	for player in ivalues(GAMESTATE:GetHumanPlayers()) do
-		local path = getFavoritesPath(player)
-		if FILEMAN:DoesFileExist(path) then
-			table.insert(playlists, {{"MixTape", "Preferred"}})
-			break
-		end
+		table.insert(playlists, {AddFavoritesRow(player)})
 	end
 	return playlists
 end
 
-
+-- returns an array of rows for changing game-style, like from single to double.
+-- the rows returned by this function will vary depending on current gamestate
 local GetChangeableStylesRows = function()
 	local style = GAMESTATE:GetCurrentStyle():GetName():gsub("8", "")
 	local available_styles = {}
-	-- Allow players to switch from single to double and from double to single
+
+	-- Allow players to switch from single to double and from double to single (and etc.)
 	-- but only present these options if Joint Double or Joint Premium is enabled
 	-- and we're not in "AutoSetStyle" mode (all styles presented simultaneously like PIU does)
-
 	if THEME:GetMetric("Common", "AutoSetStyle") == false
 	and not (PREFSMAN:GetPreference("Premium") == "Premium_Off"
 	and GAMESTATE:GetCoinMode() == "CoinMode_Pay") then
+
 		if style == "single" then
 			table.insert(available_styles, {"ChangeStyle", "Double", ChangeStyle})
 			if ThemePrefs.Get("AllowDanceSolo") then
 				table.insert(available_styles, {"ChangeStyle", "Solo", ChangeStyle})
 			end
+
 		elseif style == "double" then
 			table.insert(available_styles, {"ChangeStyle", "Single", ChangeStyle})
 			if ThemePrefs.Get("AllowDanceSolo") then
 				table.insert(available_styles, {"ChangeStyle", "Solo", ChangeStyle})
 			end
+
 		elseif style == "solo" then
 			table.insert(available_styles, {"ChangeStyle", "Single", ChangeStyle})
 			table.insert(available_styles, {"ChangeStyle", "Double", ChangeStyle})
+
 		-- Couple doesn't have enough content for people to be able to switch into it
 		-- However, if for some reason you end up in couples mode, you should be able to
 		-- escape
 		elseif style == "couple" then
 			table.insert(available_styles, {"ChangeStyle", "Versus", ChangeStyle})
+
 		-- Routine is not ready for use yet, but it might be soon.
 		-- This can be uncommented at that time to allow switching from versus into routine.
 		-- elseif style == "versus" then
@@ -224,6 +300,7 @@ local GetChangeableStylesRows = function()
 	end
 end
 
+------------------------------------------------------------
 
 return {
   ShowSongSearch,
@@ -237,11 +314,9 @@ return {
   ChangeSort,
   ChangeMode,
   ChangeStyle,
-  AddFavorite,
-
-  AddFavoritesRows,
+  AddSongToFavorites,
+  AddFavoritesRow,
   AddPlaylistsRows,
   GetChangeableStylesRows,
-
   DownloadsExist
 }
