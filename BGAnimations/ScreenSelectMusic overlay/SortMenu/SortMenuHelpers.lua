@@ -44,7 +44,7 @@ local function ShowSelectProfile()
 	-- to different ones.
 	GAMESTATE:SaveProfiles()
 	PROFILEMAN:SaveMachineProfile()
-	overlay:queuecommand("DirectInputToEngineForSelectProfile")
+	screen:GetChild("Overlay"):queuecommand("DirectInputToEngineForSelectProfile")
 end
 
 local function ShowSetSummary()
