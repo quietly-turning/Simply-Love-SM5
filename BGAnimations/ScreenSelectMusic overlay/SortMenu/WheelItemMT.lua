@@ -80,7 +80,7 @@ return {
 					Font="Common Normal",
 					InitCommand=function(subself)
 						self.top_text = subself
-						subself:zoom(1.15):xy(32,-15):diffusealpha(0)
+						subself:zoom(1.15):xy(33,-8):diffusealpha(0)
 						subself:horizalign(left)
 					end,
 					OnCommand=function(subself)
@@ -107,10 +107,10 @@ return {
 						subself:sleep(0.1):linear(0.15):diffusealpha(1)
 					end,
 					ShowFolderCommand=function(subself)
-						subself:x(64)
+						subself:xy(64,10)
 					end,
 					HideFolderCommand=function(subself)
-						subself:x(32)
+						subself:xy(32,17)
 					end,
 					GainFocusCommand=function(subself)
 						subself:diffuse(1,1,1,1)

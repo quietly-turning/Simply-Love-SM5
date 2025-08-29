@@ -259,9 +259,10 @@ local t = Def.ActorFrame {
 	-- this returns an ActorFrame ( see: ./Scripts/Consensual-sick_wheel.lua )
 	sort_wheel:create_actors( "Sort Menu", 7, wheel_item_mt, _screen.cx, _screen.cy ),
 
+	-- arrow cursor
 	LoadActor(THEME:GetPathG("", "EditMenu Right.png"))..{
 		Name="arrow_cursor",
-		InitCommand=function(self) self:zoom(0.4):xy(_screen.cx-96, _screen.cy+5) end,
+		InitCommand=function(self) self:zoom(0.4):xy(_screen.cx-96, _screen.cy+9) end,
 		BumpCommand=function(self) self:finishtweening():smooth(0.075):x(_screen.cx-101):smooth(0.075):x(_screen.cx-96) end,
 		ShowCursorCommand=function(self) self:visible(true)  end,
 		HideCursorCommand=function(self) self:visible(false) end,
