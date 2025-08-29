@@ -1,4 +1,135 @@
-local AddFavorites = function()
+local sort_wheel = ...
+
+local function ShowSongSearch()
+	SCREENMAN:GetTopScreen():GetChild("Overlay"):queuecommand("DirectInputToEngineForSongSearch")
+end
+
+local function ShowTestInput()
+	SCREENMAN:GetTopScreen():GetChild("Overlay"):queuecommand("DirectInputToTestInput")
+end
+
+local function ShowLeaderboard()
+	SCREENMAN:GetTopScreen():GetChild("Overlay"):queuecommand("DirectInputToLeaderboard")
+end
+
+local function ShowDownloads()
+	local overlay = SCREENMAN:GetTopScreen():GetChild("Overlay")
+	-- Make sure we cancel the request if it's active before trying to switch screens.
+	-- This prevents the "Stale ActorFrame" error.
+	overlay:GetChild("PaneDisplayMaster"):GetChild("GetScoresRequester"):playcommand("Cancel")
+	overlay:playcommand("DirectInputToEngine")
+	SCREENMAN:SetNewScreen("ScreenViewDownloads")
+end
+
+local function ShowPracticeMode()
+	local screen = SCREENMAN:GetTopScreen()
+	screen:SetNextScreenName("ScreenPractice")
+	screen:StartTransitioningScreen("SM_GoToNextScreen")
+end
+
+local function ShowSelectProfile()
+	local screen = SCREENMAN:GetTopScreen()
+	SL.Global.FastProfileSwitchInProgress = true
+	-- If a memory card is inserted we can't be on that profile's songs when switching profiles
+	-- as the profile is temporarily unloaded when finishing the screen.
+	if MEMCARDMAN:GetCardState(PLAYER_1) ~= 'MemoryCardState_none' or MEMCARDMAN:GetCardState(PLAYER_2) ~= 'MemoryCardState_none' then
+		screen:GetMusicWheel():SetOpenSection("");
+	end
+	-- Make sure we save any currently active profiles before potentially switching
+	-- to different ones.
+	GAMESTATE:SaveProfiles()
+	PROFILEMAN:SaveMachineProfile()
+	overlay:queuecommand("DirectInputToEngineForSelectProfile")
+end
+
+local function ShowSetSummary()
+	local screen = SCREENMAN:GetTopScreen()
+	screen:SetNextScreenName("ScreenEvaluationSummarySet")
+	screen:StartTransitioningScreen("SM_GoToNextScreen")
+end
+
+local function ShowLoadNewSongs()
+	local overlay = SCREENMAN:GetTopScreen():GetChild("Overlay")
+	-- Make sure we cancel the request if it's active before trying to switch screens.
+	-- This prevents the "Stale ActorFrame" error.
+	overlay:GetChild("PaneDisplayMaster"):GetChild("GetScoresRequester"):playcommand("Cancel")
+	overlay:playcommand("DirectInputToEngine")
+	SCREENMAN:SetNewScreen("ScreenReloadSongsSSM")
+end
+
+-- the player wants to change the MusicWheel's song sort, for example from "Group" to "BPM"
+local function ChangeSort()
+	local focus = sort_wheel:get_actor_item_at_focus_pos()
+	MESSAGEMAN:Broadcast('Sort', { order = focus.sort_by })
+	MESSAGEMAN:Broadcast('ResetHeaderText')
+	SCREENMAN:GetTopScreen():GetChild("Overlay"):queuecommand("DirectInputToEngine")
+end
+
+-- the player wants to change modes, for example from ITG to Casual
+local function ChangeMode()
+	local screen   = SCREENMAN:GetTopScreen()
+	local sortmenu = screen:GetChild("Overlay"):GetChild("SortMenu")
+	local focus    = sort_wheel:get_actor_item_at_focus_pos()
+	SL.Global.GameMode = focus.change
+
+	for player in ivalues(GAMESTATE:GetHumanPlayers()) do
+		ApplyMods(player)       -- global function from ./Scripts/SL-Helpers.lua
+	end
+	SetGameModePreferences()  -- global function from ./Scripts/SL-Helpers.lua
+	THEME:ReloadMetrics()
+	-- Broadcast that the SL GameMode has changed
+	-- SSM's header will update its text and highscore names in the PaneDisplays will refresh
+	MESSAGEMAN:Broadcast("SLGameModeChanged")
+	-- Reload the SortMenu's available options and queue "DirectInputToEngine"
+	-- to return input from Lua back to the engine and hide the SortMenu from view
+	sortmenu:playcommand("AssessAvailableChoices"):queuecommand("DirectInputToEngine")
+	-- the player is switching to casual mode which uses a different SelectMusic screen
+	if focus.change == "Casual" then
+		screen:SetNextScreenName("ScreenSelectMusicCasual")
+		screen:StartTransitioningScreen("SM_GoToNextScreen")
+	end
+end
+
+-- the player wants to change styles, for example from single to double
+local function ChangeStyle()
+	local screen  = SCREENMAN:GetTopScreen()
+	local overlay = screen:GetChild("Overlay")
+	-- If the MenuTimer is in effect, we need to make sure the current number of seconds
+	-- remaining is preserved so we can reinstate it later. ShowPressStartForOptions
+	-- will save the current number of seconds before transitioning to the next screen.
+	if PREFSMAN:GetPreference("MenuTimer") then
+		overlay:playcommand("ShowPressStartForOptions")
+	end
+	-- Get the style we want to change to
+	local new_style = focus.change:lower()
+	-- accommodate techno game
+	if GAMESTATE:GetCurrentGame():GetName() == "techno" then new_style = new_style .. "8" end
+	-- set it in the engine
+	GAMESTATE:SetCurrentStyle(new_style)
+	-- Make sure we cancel the request if it's active before trying to switch screens.
+	-- This prevents the "Stale ActorFrame" error.
+	overlay:GetChild("PaneDisplayMaster"):GetChild("GetScoresRequester"):playcommand("Cancel")
+	-- finally, reload the screen
+	screen:SetNextScreenName("ScreenReloadSSM")
+	screen:StartTransitioningScreen("SM_GoToNextScreen")
+end
+
+-- a specific player wants to add the current song from the MusicWheel as a favorite to their profile
+local function AddFavorite(pn)
+	addOrRemoveFavorite(pn)  -- global function from ./Scripts/SL-FavoritesHandler.lua
+
+	local screen = SCREENMAN:GetTopScreen()
+	local overlay    = screen:GetChild("Overlay")
+	local musicwheel = screen:GetMusicWheel()
+
+	-- Nudge the wheel a bit so that that the icon is correctly updated.
+	overlay:queuecommand("DirectInputToEngine")
+	musicwheel:Move(1)
+	musicwheel:Move(-1)
+	musicwheel:Move(0)
+end
+
+local function AddFavoritesRows()
     for player in ivalues(GAMESTATE:GetHumanPlayers()) do
         local path = getFavoritesPath(player)
         if FILEMAN:DoesFileExist(path) then
@@ -8,30 +139,17 @@ local AddFavorites = function()
     return nil
 end
 
-
 -- Only display the View Downloads option if we're connected to
 -- GrooveStats and Auto-Downloads are enabled.
-local DownloadsExist = function()
+local function DownloadsExist()
     return SL.GrooveStats.IsConnected and ThemePrefs.Get("AutoDownloadUnlocks")
 end
 
 
 
-local AddPlayerSortOptions = function()
-    local player_sort_options = {}
-    for player in ivalues(GAMESTATE:GetHumanPlayers()) do
-        if PROFILEMAN:IsPersistentProfile(player) then
-            table.insert(player_sort_options, {"SortBy", "Top" .. ToEnumShortString(player) .. "Grades"})
-        end
-    end
-    return player_sort_options
-end
-
-
-
-local AddPlaylists = function()
+local AddPlaylistsRows = function()
 	local playlists = {}
-	
+
 	-- First add the machine playlists
 	-- Get the name of every file in the Other/Playlists directory
 	local files = FILEMAN:GetDirListing(THEME:GetCurrentThemeDirectory().."Other/Playlists/")
@@ -69,7 +187,8 @@ local AddPlaylists = function()
 end
 
 
-local GetChangeableStyles = function(style)
+local GetChangeableStylesRows = function()
+	local style = GAMESTATE:GetCurrentStyle():GetName():gsub("8", "")
 	local available_styles = {}
 	-- Allow players to switch from single to double and from double to single
 	-- but only present these options if Joint Double or Joint Premium is enabled
@@ -79,36 +198,50 @@ local GetChangeableStyles = function(style)
 	and not (PREFSMAN:GetPreference("Premium") == "Premium_Off"
 	and GAMESTATE:GetCoinMode() == "CoinMode_Pay") then
 		if style == "single" then
-			table.insert(available_styles, {"ChangeStyle", "Double"})
+			table.insert(available_styles, {"ChangeStyle", "Double", ChangeStyle})
 			if ThemePrefs.Get("AllowDanceSolo") then
-				table.insert(available_styles, {"ChangeStyle", "Solo"})
+				table.insert(available_styles, {"ChangeStyle", "Solo", ChangeStyle})
 			end
 		elseif style == "double" then
-			table.insert(available_styles, {"ChangeStyle", "Single"})
+			table.insert(available_styles, {"ChangeStyle", "Single", ChangeStyle})
 			if ThemePrefs.Get("AllowDanceSolo") then
-				table.insert(available_styles, {"ChangeStyle", "Solo"})
+				table.insert(available_styles, {"ChangeStyle", "Solo", ChangeStyle})
 			end
 		elseif style == "solo" then
-			table.insert(available_styles, {"ChangeStyle", "Single"})
-			table.insert(available_styles, {"ChangeStyle", "Double"})
+			table.insert(available_styles, {"ChangeStyle", "Single", ChangeStyle})
+			table.insert(available_styles, {"ChangeStyle", "Double", ChangeStyle})
 		-- Couple doesn't have enough content for people to be able to switch into it
 		-- However, if for some reason you end up in couples mode, you should be able to
 		-- escape
 		elseif style == "couple" then
-			table.insert(available_styles, {"ChangeStyle", "Versus"})
+			table.insert(available_styles, {"ChangeStyle", "Versus", ChangeStyle})
 		-- Routine is not ready for use yet, but it might be soon.
 		-- This can be uncommented at that time to allow switching from versus into routine.
 		-- elseif style == "versus" then
-		-- 	table.insert(available_styles, {"ChangeStyle", "Routine"})
+		-- 	table.insert(available_styles, {"ChangeStyle", "Routine", ChangeStyle})
 		end
 		return available_styles
 	end
 end
 
+
 return {
-  AddFavorites,
-  DownloadsExist,
-  AddPlayerSortOptions,
-  AddPlaylists,
-  GetChangeableStyles
+  ShowSongSearch,
+  ShowTestInput,
+  ShowLeaderboard,
+  ShowDownloads,
+  ShowPracticeMode,
+  ShowSelectProfile,
+  ShowSetSummary,
+  ShowLoadNewSongs,
+  ChangeSort,
+  ChangeMode,
+  ChangeStyle,
+  AddFavorite,
+
+  AddFavoritesRows,
+  AddPlaylistsRows,
+  GetChangeableStylesRows,
+
+  DownloadsExist
 }

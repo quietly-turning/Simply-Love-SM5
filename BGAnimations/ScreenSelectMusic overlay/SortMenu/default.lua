@@ -1,3 +1,23 @@
+------------------------------------------------------------
+-- set up the SortMenu's choices prior to Actor initialization
+-- sick_wheel_mt is a metatable with global scope defined in ./Scripts/Consensual-sick_wheel.lua
+local sort_wheel = setmetatable({}, sick_wheel_mt)
+
+local wheel_options = LoadActor("./SortMenuRows.lua", sort_wheel)
+
+-- the logic that handles navigating the SortMenu
+-- (scrolling through choices, choosing one, canceling)
+-- is complex enough to be in its own file
+local sortmenu_input    = LoadActor("SortMenu_InputHandler.lua", {sort_wheel, wheel_options})
+
+-- input handlers for TestInput and Leaderboards are similarly complex
+local testinput_input   = LoadActor("TestInput_InputHandler.lua")
+local leaderboard_input = LoadActor("Leaderboard_InputHandler.lua")
+
+-- logic for song search is also in its own file
+local SongSearchSettings = LoadActor("SongSearchSettings.lua")
+
+------------------------------------------------------------
 -- "MT" is my personal means of denoting that this thing (the file, the variable, whatever)
 -- has something to do with a Lua metatable.
 --
@@ -18,103 +38,37 @@
 -- recommend it until I find a more helpful one.
 --                                      -quietly
 local sortmenu_dimensions = { w=210, h=160 }
-local wheel_item_mt = LoadActor("WheelItemMT.lua", sortmenu_dimensions)
+local wheel_item_mt = LoadActor("WheelItemMT.lua", {sortmenu_dimensions, wheel_options})
 
 -- initialize the SortMenu to be be focused on the 2nd element, SortBy-Group in the "Common" folder
 local wheel_index = 2
 
 ------------------------------------------------------------
+-- function for toggling a SortMenu folder open/closed
+local ToggleFolder = function()
+	local focus = sort_wheel:get_actor_item_at_focus_pos()
+	local folder_name
 
-local style = GAMESTATE:GetCurrentStyle():GetName():gsub("8", "")
-local AddFavorites, DownloadsExist, AddPlayerSortOptions, AddPlaylists, GetChangeableStyles = unpack(LoadActor("./SortMenuHelpers.lua"))
+	-- find the folder in `wheel_options` array and flip its `open` flag
+	for i, folder in ipairs(wheel_options) do
+		if folder.name == focus.toggle_folder then
+			folder.open = not folder.open
+			folder_name = folder.name
+			break
+		end
+	end
 
--- `wheel_options` is the table that defines the SortMenu's choices
--- The structure is as follows:
--- TODO: document new structure once it settles
-
-local wheel_options = {
-	{
-		name="CategoryCommon",
-		open=true,
-		children={
-			{ {"SortBy", "Group"} },
-			{ {"SortBy", "Title"} },
-			{ {"SortBy", "Recent"} },
-			-- Casual players often accidentally choose ITG mode and an experienced player in the area may notice this
-			-- and offer to switch them back to Casual mode using this option in the SortMenu.
-			{ {"ChangeMode", "Casual"}, SL.Global.Stages.PlayedThisGame == 0 },
-			{ {"ImLovinIt",  "AddFavorite"}, function() return GAMESTATE:GetCurrentSong() ~= nil end} ,
-			AddFavorites(),
-			{ {"GrooveStats", "Leaderboard"}, function() return GAMESTATE:GetCurrentSong() ~= nil end },
-		}
-	},
-
-	{
-		name="CategorySorts",
-		open=false,
-		children={
-			{ {"SortBy", "Group"}  },
-			{ {"SortBy", "Title"}  },
-			{ {"SortBy", "Artist"} },
-			{ {"SortBy", "Genre"}  },
-			{ {"SortBy", "BPM"}    },
-			{ {"SortBy", "Length"} },
-			{ {"SortBy", "Meter"}  },
-			{ {"SortBy", "Popularity"} },
-			{ {"SortBy", "Recent"} },
-			{ {"SortBy", "TopGrades"} },
-			{ {"SortBy", "PopularityP1"}, function() return PROFILEMAN:IsPersistentProfile(PLAYER_1) end },
-			{ {"SortBy", "RecentP1"},     function() return PROFILEMAN:IsPersistentProfile(PLAYER_1) end },
-			{ {"SortBy", "TopP1Grades"},  function() return PROFILEMAN:IsPersistentProfile(PLAYER_1) end },
-			{ {"SortBy", "PopularityP2"}, function() return PROFILEMAN:IsPersistentProfile(PLAYER_2) end },
-			{ {"SortBy", "RecentP2"},     function() return PROFILEMAN:IsPersistentProfile(PLAYER_2) end },
-			{ {"SortBy", "TopP2Grades"},  function() return PROFILEMAN:IsPersistentProfile(PLAYER_2) end },
-		}
-	},
-
-	{
-		name="CategoryAdvanced",
-		open=false,
-		children={
-			{ {"FeelingSalty",     "TestInput" },    GAMESTATE:IsEventMode() },
-			{ {"HardTime",         "PracticeMode"},  function() return GAMESTATE:IsEventMode() and GAMESTATE:GetCurrentSong() ~= nil and ThemePrefs.Get("KeyboardFeatures") end },
-			{ {"TakeABreather",    "LoadNewSongs"} },
-			{ {"NeedMoreRam",      "ViewDownloads"}, DownloadsExist },
-			{ {"WhereforeArtThou", "SongSearch"},    not GAMESTATE:IsCourseMode() and ThemePrefs.Get("KeyboardFeatures") },
-			{ {"NextPlease",       "SwitchProfile"}, ThemePrefs.Get("AllowScreenSelectProfile") },
-			{ {"SetSummaryText",   "SetSummary"},    SL.Global.Stages.PlayedThisGame > 0 },
-		}
-	},
-
-	{
-		name="CategoryStyles",
-		open=false,
-		children=GetChangeableStyles(style),
-	},
-
-	{
-		name="CategoryPlaylists",
-		open=false,
-		children=AddPlaylists(),
-	},
-}
-
-------------------------------------------------------------
--- set up the SortMenu's choices prior to Actor initialization
--- sick_wheel_mt is a metatable with global scope defined in ./Scripts/Consensual-sick_wheel.lua
-local sort_wheel = setmetatable({}, sick_wheel_mt)
-
--- the logic that handles navigating the SortMenu
--- (scrolling through choices, choosing one, canceling)
--- is complex enough to be in its own file
-local sortmenu_input    = LoadActor("SortMenu_InputHandler.lua", {sort_wheel, wheel_options})
-
--- input handlers for TestInput and Leaderboards are similarly complex
-local testinput_input   = LoadActor("TestInput_InputHandler.lua")
-local leaderboard_input = LoadActor("Leaderboard_InputHandler.lua")
-
--- logic for song search is also in its own file
-local SongSearchSettings = LoadActor("SongSearchSettings.lua")
+	-- after toggling a folder open/closed, AssessAvailableChoicesCommand will
+	-- build a fresh 1-dimensional array of rows to present the user:
+	--   if the user closed a folder, there will be fewer elements in the array than before
+	--   if the user opened a folder, there will be more than before.
+	-- this means the index of elements in the array will change!  unless we manually handle
+	-- the wheel's new focus after a toggle, the SortMenu will appear to "jump" somewhere
+	-- else in the list after toggling.
+	-- so, pass folder_name to AssessAvailableChoices so we can search for the new index of the
+	-- folder we just toggled and set the wheel's focus to that
+	SCREENMAN:GetTopScreen():GetChild("Overlay"):playcommand("AssessAvailableChoices", {folder_name=folder_name})
+end
 
 ------------------------------------------------------------
 -- General purpose function to redirect input back to the engine.
@@ -213,7 +167,7 @@ local t = Def.ActorFrame {
 			-- which could result in a folder having 0 children.  e.g. AddPlaylists() could
 			-- return an empty table.  only add a row for this folder if it has children
 			if #folder.children > 0 then
-				table.insert(filtered_wheel_options, {"ToggleFolder", folder.name})
+				table.insert(filtered_wheel_options, {"ToggleFolder", folder.name, ToggleFolder})
 			end
 
 			-- a folder's `open` attribute is toggled in SortMenu_InputHandler
@@ -236,6 +190,17 @@ local t = Def.ActorFrame {
 		-- of the folder that was toggled and pass it as the 2nd arg to set_info_set()
 		if params and params.folder_name then
 			wheel_index = sort_wheel:get_index_at_focus_pos()
+
+			for i, folder in ipairs(wheel_options) do
+				if folder.name == params.folder_name then
+					if folder.open then
+						self:queuecommand("OpenFolder")
+					else
+						self:queuecommand("CloseFolder")
+					end
+					break
+				end
+			end
 		end
 
 		-- Override sick_wheel's default focus_pos, which is math.floor(num_items / 2)
