@@ -8,7 +8,7 @@ local wheel_options = LoadActor("./SortMenuRows.lua", sort_wheel)
 -- the logic that handles navigating the SortMenu
 -- (scrolling through choices, choosing one, canceling)
 -- is complex enough to be in its own file
-local sortmenu_input    = LoadActor("./InputHandlers/SortMenu_InputHandler.lua", {sort_wheel, wheel_options})
+local sortmenu_input    = LoadActor("./InputHandlers/SortMenu_InputHandler.lua", sort_wheel)
 
 -- input handlers for TestInput and Leaderboards are similarly complex
 local testinput_input   = LoadActor("./InputHandlers/TestInput_InputHandler.lua")
@@ -93,12 +93,14 @@ end
 
 local t = Def.ActorFrame {
 	Name="SortMenu",
-	-- Always ensure player input is directed back to the engine when initializing SelectMusic.
+	-- ensure player input is directed back to the engine when initializing ScreenSelectMusic.
 	InitCommand=function(self) self:visible(false):queuecommand("DirectInputToEngine") end,
-	-- Always ensure player input is directed back to the engine when leaving SelectMusic.
+	-- ensure player input is directed back to the engine when leaving ScreenSelectMusic.
 	OffCommand=function(self) self:playcommand("DirectInputToEngine") end,
+
 	-- Figure out which choices to put in the SortWheel based on various current conditions.
 	OnCommand=function(self) self:playcommand("AssessAvailableChoices") end,
+
 	ShowSortMenuCommand=function(self) self:visible(true) end,
 	HideSortMenuCommand=function(self) self:visible(false) end,
 
@@ -139,20 +141,21 @@ local t = Def.ActorFrame {
 
 		overlay:playcommand("ShowLeaderboard")
 	end,
-	-- this returns input back to the engine and its ScreenSelectMusic
+
+	-- this returns input back to the engine and its ScreenSelectMusic and hides the SortMenu overlay
 	DirectInputToEngineCommand=function(self)
 		DirectInputToEngine(self)
 	end,
+
 	DirectInputToEngineForSongSearchCommand=function(self)
 		DirectInputToEngine(self)
-
 		-- Then add the ScreenTextEntry on top.
 		SCREENMAN:AddNewScreenToTop("ScreenTextEntry")
 		SCREENMAN:GetTopScreen():Load(SongSearchSettings)
 	end,
+
 	DirectInputToEngineForSelectProfileCommand=function(self)
 		DirectInputToEngine(self)
-
 		-- Then add the ScreenSelectProfile on top.
 		SCREENMAN:AddNewScreenToTop("ScreenSelectProfile")
 	end,
@@ -170,7 +173,8 @@ local t = Def.ActorFrame {
 				table.insert(filtered_wheel_options, {"ToggleFolder", folder.name, ToggleFolder})
 			end
 
-			-- a folder's `open` attribute is toggled in SortMenu_InputHandler
+			-- a folder's `open` flag is toggled in `ToggleFolder` action-function associated with each folder row
+			-- if a folder is "open", add its children as visible rows to the SortMenu
 			if (folder.open) then
 				for _, row in ipairs(folder.children) do
 					local condition = row[2]
@@ -185,22 +189,14 @@ local t = Def.ActorFrame {
 			end
 		end
 
-		-- when a folder toggle occurs, indexes in `filtered_wheel_options` will change
+		-- when a folder toggle occurs, indexes in `filtered_wheel_options` array will change
 		-- as there will be more/fewer items than prior to the toggle. find the new index
-		-- of the folder that was toggled and pass it as the 2nd arg to set_info_set()
+		-- of the folder that was toggled so we can pass it as the 2nd arg to set_info_set()
+		-- and visually "maintain place" in the SortMenu
 		if params and params.folder_name then
 			wheel_index = sort_wheel:get_index_at_focus_pos()
 
-			for i, folder in ipairs(wheel_options) do
-				if folder.name == params.folder_name then
-					if folder.open then
-						self:queuecommand("OpenFolder")
-					else
-						self:queuecommand("CloseFolder")
-					end
-					break
-				end
-			end
+			-- TODO: think about how to keep an open folder colored
 		end
 
 		-- Override sick_wheel's default focus_pos, which is math.floor(num_items / 2)

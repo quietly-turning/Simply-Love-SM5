@@ -61,10 +61,16 @@ return {
 						subself:visible(false)
 					end,
 					GainFocusCommand=function(subself)
-						subself:diffuse(1,1,1,1);
+						subself:diffuse(1,1,1,1)
 					end,
 					LoseFocusCommand=function(subself)
-						subself:diffuse(color("#4e4f54"))
+						subself:diffuse(0.6,0.6,0.6,1)
+					end,
+					OpenFolderCommand=function(subself)
+						subself:diffuse(GetCurrentColor())
+					end,
+					CloseFolderCommand=function(subself)
+						subself:diffuse(0.6,0.6,0.6,1)
 					end
 				},
 

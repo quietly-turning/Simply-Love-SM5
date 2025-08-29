@@ -1,4 +1,4 @@
-local  ShowSongSearch, ShowTestInput, ShowLeaderboard, ShowDownloads, ShowPracticeMode, ShowSelectProfile, ShowSetSummary, ShowLoadNewSongs, ChangeSort, ChangeMode, ChangeStyle, AddFavorite, AddFavoritesRows, AddPlaylistsRows, GetChangeableStylesRows, DownloadsExist = unpack(LoadActor("./SortMenuHelpers.lua", ...))
+local  ShowSongSearch, ShowTestInput, ShowLeaderboard, ShowDownloads, ShowPracticeMode, ShowSelectProfile, ShowSetSummary, ShowLoadNewSongs, ChangeSort, ChangeMode, ChangeStyle, AddSongToFavorites, AddFavoritesRow, AddPlaylistsRows, GetChangeableStylesRows, DownloadsExist = unpack(LoadActor("./SortMenuHelpers.lua", ...))
 
 ------------------------------------------------------------
 -- `wheel_options` is the table that defines the SortMenu's choices
@@ -27,13 +27,13 @@ local wheel_options = {
 			{ {"SortBy", "Group",  ChangeSort} },
 			{ {"SortBy", "Title",  ChangeSort} },
 			{ {"SortBy", "Recent", ChangeSort} },
-
 			-- Casual players often accidentally choose ITG mode and an experienced player in the area may notice this
 			-- and offer to switch them back to Casual mode using this option in the SortMenu.
-			{ {"ChangeMode", "Casual",       ChangeMode},      SL.Global.Stages.PlayedThisGame == 0 },
-			{ {"ImLovinIt",  "AddFavorite",  AddFavorite},     function() return GAMESTATE:GetCurrentSong() ~= nil end} ,
-			AddFavoritesRows(),
-			{ {"GrooveStats", "Leaderboard", ShowLeaderboard}, function() return GAMESTATE:GetCurrentSong() ~= nil end },
+			{ {"ChangeMode", "Casual",       ChangeMode},         SL.Global.Stages.PlayedThisGame == 0 },
+			{ {"ImLovinIt",  "AddFavorite",  AddSongToFavorites}, function() return GAMESTATE:GetCurrentSong() ~= nil end },
+			{ AddFavoritesRow(PLAYER_1),                          function() return GAMESTATE:IsHumanPlayer(PLAYER_1) end },
+			{ AddFavoritesRow(PLAYER_2),                          function() return GAMESTATE:IsHumanPlayer(PLAYER_2) end },
+			{ {"GrooveStats", "Leaderboard", ShowLeaderboard},    function() return GAMESTATE:GetCurrentSong() ~= nil end },
 		}
 	},
 
@@ -65,12 +65,12 @@ local wheel_options = {
 		name="CategoryAdvanced",
 		open=false,
 		children={
-			{ {"FeelingSalty",   "TestInput",     ShowTestInput },     GAMESTATE:IsEventMode() },
-			{ {"HardTime",       "PracticeMode",  ShowPracticeMode },   function() return GAMESTATE:IsEventMode() and GAMESTATE:GetCurrentSong() ~= nil and ThemePrefs.Get("KeyboardFeatures") end },
-			{ {"TakeABreather",  "LoadNewSongs",  ShowLoadNewSongs } },
-			{ {"NeedMoreRam",    "ViewDownloads", ShowDownloads },     DownloadsExist },
+			{ {"FeelingSalty",   "TestInput",     ShowTestInput     }, GAMESTATE:IsEventMode() },
+			{ {"HardTime",       "PracticeMode",  ShowPracticeMode  }, function() return GAMESTATE:IsEventMode() and GAMESTATE:GetCurrentSong() ~= nil and ThemePrefs.Get("KeyboardFeatures") end },
+			{ {"TakeABreather",  "LoadNewSongs",  ShowLoadNewSongs  } },
+			{ {"NeedMoreRam",    "ViewDownloads", ShowDownloads     }, DownloadsExist },
 			{ {"NextPlease",     "SwitchProfile", ShowSelectProfile }, ThemePrefs.Get("AllowScreenSelectProfile") },
-			{ {"SetSummaryText", "SetSummary",    ShowSetSummary },    SL.Global.Stages.PlayedThisGame > 0 },
+			{ {"SetSummaryText", "SetSummary",    ShowSetSummary    }, SL.Global.Stages.PlayedThisGame > 0 },
 		}
 	},
 
