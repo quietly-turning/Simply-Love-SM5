@@ -8,14 +8,14 @@ local wheel_options = LoadActor("./SortMenuRows.lua", sort_wheel)
 -- the logic that handles navigating the SortMenu
 -- (scrolling through choices, choosing one, canceling)
 -- is complex enough to be in its own file
-local sortmenu_input    = LoadActor("SortMenu_InputHandler.lua", {sort_wheel, wheel_options})
+local sortmenu_input    = LoadActor("./InputHandlers/SortMenu_InputHandler.lua", {sort_wheel, wheel_options})
 
 -- input handlers for TestInput and Leaderboards are similarly complex
-local testinput_input   = LoadActor("TestInput_InputHandler.lua")
-local leaderboard_input = LoadActor("Leaderboard_InputHandler.lua")
+local testinput_input   = LoadActor("./InputHandlers/TestInput_InputHandler.lua")
+local leaderboard_input = LoadActor("./InputHandlers/Leaderboard_InputHandler.lua")
 
 -- logic for song search is also in its own file
-local SongSearchSettings = LoadActor("SongSearchSettings.lua")
+local SongSearchSettings = LoadActor("../SongSearch/SongSearchSettings.lua")
 
 ------------------------------------------------------------
 -- "MT" is my personal means of denoting that this thing (the file, the variable, whatever)
@@ -38,7 +38,7 @@ local SongSearchSettings = LoadActor("SongSearchSettings.lua")
 -- recommend it until I find a more helpful one.
 --                                      -quietly
 local sortmenu_dimensions = { w=210, h=160 }
-local wheel_item_mt = LoadActor("WheelItemMT.lua", {sortmenu_dimensions, wheel_options})
+local wheel_item_mt = LoadActor("WheelItemMT.lua", {sortmenu_dimensions})
 
 -- initialize the SortMenu to be be focused on the 2nd element, SortBy-Group in the "Common" folder
 local wheel_index = 2

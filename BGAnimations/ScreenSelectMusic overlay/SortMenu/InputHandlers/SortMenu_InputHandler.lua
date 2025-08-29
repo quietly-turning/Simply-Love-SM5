@@ -36,6 +36,7 @@ local input = function(event)
 			end
 
 			if focus.kind == "PersonalPlaylist" then
+				SM(focus.new_overlay)
 				local profileDir = PROFILEMAN:GetProfileDir(ProfileSlot[PlayerNumber:Reverse()[event.PlayerNumber] + 1])
 				SONGMAN:SetPreferredSongs(profileDir .."Playlists/" .. focus.new_overlay .. ".txt", true);
 				if SONGMAN:GetPreferredSortSongs() then
