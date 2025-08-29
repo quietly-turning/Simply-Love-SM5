@@ -1,4 +1,4 @@
-local sortmenu_dimensions, wheel_options = unpack(...)
+local sortmenu_dimensions = unpack(...)
 local row_height = 36
 
 -- the metatable for an item in the sort_wheel
@@ -61,7 +61,6 @@ return {
 						subself:visible(false)
 					end,
 					GainFocusCommand=function(subself)
-
 						subself:diffuse(1,1,1,1);
 					end,
 					LoseFocusCommand=function(subself)
@@ -153,8 +152,8 @@ return {
 
 
 		-- `self` is one particular instance of the metatable returned by WheelItemMT
-		-- `info` is an individual tuple from filtered_wheel_options like
-		--    {'SortBy','Title'} or {'TakeABreather', 'LoadNewSongs'} or {'ToggleFolder','CategoryStyles'}
+		-- `info` is an individual info table from filtered_wheel_options like
+		--    {'SortBy','Title', ChangeSort} or {'TakeABreather', 'LoadNewSongs', ShowLoadNewSongs} or {'ToggleFolder','CategoryStyles', ToggleFolder}
 		set = function(self, info)
 			if not info then self.bottom_text:settext("") return end
 			self.info = info
