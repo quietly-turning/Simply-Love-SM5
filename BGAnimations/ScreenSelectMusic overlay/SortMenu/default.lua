@@ -200,7 +200,12 @@ local t = Def.ActorFrame {
 		-- of the folder that was toggled so we can pass it as the 2nd arg to set_info_set()
 		-- and visually "maintain place" in the SortMenu
 		if params and params.folder_name then
-			wheel_index = sort_wheel:get_index_at_focus_pos()
+			for i, row in ipairs(filtered_wheel_options) do
+				if row[2] == params.folder_name then
+					wheel_index = i
+					break
+				end
+			end
 
 			-- TODO: think about how to keep an open folder colored
 		end
