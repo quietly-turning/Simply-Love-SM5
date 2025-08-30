@@ -181,7 +181,7 @@ return {
 			local bottomtext
 
 			-- this row's bottom_text is the name of the playlist file retrieved from disk
-			if (info[1] == "Playlist") then bottomtext = info[2]
+			if (info[1]=="Playlist" or info[1]=="MachinePlaylist" or info[1]=="PersonalPlaylist") then bottomtext = info[2]
 			-- localize this row's bottom_text from ScreenSelectPlayMode (e.g. "Casual")
 			elseif (info[1] == "ChangeMode") then bottomtext = THEME:GetString("ScreenSelectPlayMode", info[2])
 			-- localize this row's bottom_text from ScreenSelectMusic
