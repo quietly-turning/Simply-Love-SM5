@@ -135,7 +135,7 @@ local function ChangeStyle()
 		overlay:playcommand("ShowPressStartForOptions")
 	end
 	-- Get the style we want to change to
-	local new_style = focus.change:lower()
+	local new_style = sort_wheel:get_actor_item_at_focus_pos().change:lower()
 	-- accommodate techno game
 	if GAMESTATE:GetCurrentGame():GetName() == "techno" then new_style = new_style .. "8" end
 	-- set it in the engine
@@ -259,45 +259,48 @@ end
 -- returns an array of rows for changing game-style, like from single to double.
 -- the rows returned by this function will vary depending on current gamestate
 local GetChangeableStylesRows = function()
-	local style = GAMESTATE:GetCurrentStyle():GetName():gsub("8", "")
-	local available_styles = {}
-
 	-- Allow players to switch from single to double and from double to single (and etc.)
 	-- but only present these options if Joint Double or Joint Premium is enabled
 	-- and we're not in "AutoSetStyle" mode (all styles presented simultaneously like PIU does)
-	if THEME:GetMetric("Common", "AutoSetStyle") == false
-	and not (PREFSMAN:GetPreference("Premium") == "Premium_Off"
-	and GAMESTATE:GetCoinMode() == "CoinMode_Pay") then
-
-		if style == "single" then
-			table.insert(available_styles, {"ChangeStyle", "Double", ChangeStyle})
-			if ThemePrefs.Get("AllowDanceSolo") then
-				table.insert(available_styles, {"ChangeStyle", "Solo", ChangeStyle})
-			end
-
-		elseif style == "double" then
-			table.insert(available_styles, {"ChangeStyle", "Single", ChangeStyle})
-			if ThemePrefs.Get("AllowDanceSolo") then
-				table.insert(available_styles, {"ChangeStyle", "Solo", ChangeStyle})
-			end
-
-		elseif style == "solo" then
-			table.insert(available_styles, {"ChangeStyle", "Single", ChangeStyle})
-			table.insert(available_styles, {"ChangeStyle", "Double", ChangeStyle})
-
-		-- Couple doesn't have enough content for people to be able to switch into it
-		-- However, if for some reason you end up in couples mode, you should be able to
-		-- escape
-		elseif style == "couple" then
-			table.insert(available_styles, {"ChangeStyle", "Versus", ChangeStyle})
-
-		-- Routine is not ready for use yet, but it might be soon.
-		-- This can be uncommented at that time to allow switching from versus into routine.
-		-- elseif style == "versus" then
-		-- 	table.insert(available_styles, {"ChangeStyle", "Routine", ChangeStyle})
-		end
-		return available_styles
+	if THEME:GetMetric("Common", "AutoSetStyle") == true
+	or (PREFSMAN:GetPreference("Premium") == "Premium_Off"
+	    and GAMESTATE:GetCoinMode() == "CoinMode_Pay"
+	) then
+		return {}
 	end
+
+
+	local style = GAMESTATE:GetCurrentStyle():GetName():gsub("8", "")
+	local available_styles = {}
+
+	if style == "single" then
+		table.insert(available_styles, {{"ChangeStyle", "Double", ChangeStyle}})
+		if ThemePrefs.Get("AllowDanceSolo") then
+			table.insert(available_styles, {{"ChangeStyle", "Solo", ChangeStyle}})
+		end
+
+	elseif style == "double" then
+		table.insert(available_styles, {{"ChangeStyle", "Single", ChangeStyle}})
+		if ThemePrefs.Get("AllowDanceSolo") then
+			table.insert(available_styles, {{"ChangeStyle", "Solo", ChangeStyle}})
+		end
+
+	elseif style == "solo" then
+		table.insert(available_styles, {{"ChangeStyle", "Single", ChangeStyle}})
+		table.insert(available_styles, {{"ChangeStyle", "Double", ChangeStyle}})
+
+	-- Couple doesn't have enough content for people to be able to switch into it
+	-- However, if for some reason you end up in couples mode, you should be able to
+	-- escape
+	elseif style == "couple" then
+		table.insert(available_styles, {{"ChangeStyle", "Versus", ChangeStyle}})
+
+	-- Routine is not ready for use yet, but it might be soon.
+	-- This can be uncommented at that time to allow switching from versus into routine.
+	-- elseif style == "versus" then
+	-- 	table.insert(available_styles, {{"ChangeStyle", "Routine", ChangeStyle}})
+	end
+	return available_styles
 end
 
 ------------------------------------------------------------
