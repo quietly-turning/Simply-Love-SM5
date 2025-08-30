@@ -49,12 +49,16 @@ local ToggleFolder = function()
 	local focus = sort_wheel:get_actor_item_at_focus_pos()
 	local folder_name
 
-	-- find the folder in `wheel_options` array and flip its `open` flag
 	for i, folder in ipairs(wheel_options) do
+		-- find the folder in `wheel_options` array and flip its `open` flag
 		if folder.name == focus.toggle_folder then
 			folder.open = not folder.open
 			folder_name = folder.name
-			break
+
+		-- when toggling a given folder (above), ensure all other folders are closed
+		-- meaning, the opening one folder closes all others
+		else
+			folder.open = false
 		end
 	end
 
