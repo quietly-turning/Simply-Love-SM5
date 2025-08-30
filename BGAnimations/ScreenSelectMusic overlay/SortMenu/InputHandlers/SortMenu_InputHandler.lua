@@ -15,11 +15,13 @@ local input = function(event)
 	if event.type ~= "InputEventType_Release" then
 		if event.GameButton == "MenuRight" or event.GameButton == "MenuDown" then
 			sort_wheel:scroll_by_amount(1)
+			sortmenu:playcommand("WheelMoved")
 			sortmenu:GetChild("change_sound"):play()
 			sortmenu:GetChild("arrow_cursor"):playcommand("Bump")
 
 		elseif event.GameButton == "MenuLeft" or event.GameButton == "MenuUp" then
 			sort_wheel:scroll_by_amount(-1)
+			sortmenu:playcommand("WheelMoved")
 			sortmenu:GetChild("change_sound"):play()
 			sortmenu:GetChild("arrow_cursor"):playcommand("Bump")
 

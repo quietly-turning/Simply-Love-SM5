@@ -104,6 +104,8 @@ local t = Def.ActorFrame {
 	ShowSortMenuCommand=function(self) self:visible(true) end,
 	HideSortMenuCommand=function(self) self:visible(false) end,
 
+  WheelMovedCommand=function() wheel_index = sort_wheel:get_index_at_focus_pos() end,
+
 	DirectInputToSortMenuCommand=function(self)
 		local screen = SCREENMAN:GetTopScreen()
 		local overlay = self:GetParent()
