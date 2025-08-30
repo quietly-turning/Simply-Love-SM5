@@ -211,10 +211,17 @@ end
 --   {{ top_text, bottom_text, action_if_chosen }, optional_condition_to_be_visible }
 
 -- returns one row for one player's favorites.txt
-local function AddFavoritesRow(pn)
-		local path = getFavoritesPath(pn)
+local function AddFavoritesRow(player)
+		local path = getFavoritesPath(player)
 		if FILEMAN:DoesFileExist(path) then
+
+			if #GAMESTATE:GetHumanPlayers() > 1 then
+				-- both players are joined, return bottom_text like "P1 Favorites" or "P2 Favorites"
+				return {"MixTape", ("%sPreferred"):format(ToEnumShortString(player)), function() ChangeToPlayerFavoritesSort(pn) end}
+			else
+				-- only one player joined, return bottom_text as "Favorites"
 				return {"MixTape", "Preferred", function() ChangeToPlayerFavoritesSort(pn) end}
+			end
 		end
 
     return nil
