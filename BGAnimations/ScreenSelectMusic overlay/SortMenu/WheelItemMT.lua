@@ -66,12 +66,6 @@ return {
 					LoseFocusCommand=function(subself)
 						subself:diffuse(0.6,0.6,0.6,1)
 					end,
-					OpenFolderCommand=function(subself)
-						subself:diffuse(GetCurrentColor())
-					end,
-					CloseFolderCommand=function(subself)
-						subself:diffuse(0.6,0.6,0.6,1)
-					end
 				},
 
 				-- top text
@@ -176,16 +170,20 @@ return {
 				self.toggle_folder = info[2]   -- SortMenu's default.lua ToggleFolder() uses this
 			end
 
-			-- localize the top and bottom text for this row
 			local toptext = THEME:GetString("ScreenSelectMusic", info[1])
 			local bottomtext
 
 			-- this row's bottom_text is the name of the playlist file retrieved from disk
-			if (info[1]=="Playlist" or info[1]=="MachinePlaylist" or info[1]=="PersonalPlaylist") then bottomtext = info[2]
-			-- localize this row's bottom_text from ScreenSelectPlayMode (e.g. "Casual")
-			elseif (info[1] == "ChangeMode") then bottomtext = THEME:GetString("ScreenSelectPlayMode", info[2])
-			-- localize this row's bottom_text from ScreenSelectMusic
-			else bottomtext = THEME:GetString("ScreenSelectMusic", info[2])
+			if (info[1]=="Playlist" or info[1]=="MachinePlaylist" or info[1]=="PersonalPlaylist") then
+				bottomtext = info[2]
+
+				-- localize this row's bottom_text from ScreenSelectPlayMode (e.g. "Casual")
+			elseif (info[1] == "ChangeMode") then
+				bottomtext = THEME:GetString("ScreenSelectPlayMode", info[2])
+
+				-- localize this row's bottom_text from ScreenSelectMusic
+			else
+				bottomtext = THEME:GetString("ScreenSelectMusic", info[2])
 			end
 
 			self.top_text:settext(toptext)

@@ -206,8 +206,6 @@ local t = Def.ActorFrame {
 					break
 				end
 			end
-
-			-- TODO: think about how to keep an open folder colored
 		end
 
 		-- Override sick_wheel's default focus_pos, which is math.floor(num_items / 2)
